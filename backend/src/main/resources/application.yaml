@@ -1,3 +1,16 @@
 spring:
   application:
-    name: backend
+    name: social-network
+
+  datasource:
+    username: postgres
+    password: "29092007"
+    url: jdbc:postgresql://localhost:5432/social_network_bd
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
