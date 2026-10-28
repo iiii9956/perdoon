@@ -1,87 +1,93 @@
+
 package com.example.backend.feature.user;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
 public class User {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        @Column(nullable = false, unique = true)
-        private String email;
-        @Column(nullable = false)
-        private String password;
-        private String username;
-        private String description;
-        private String avatarUrl;
-        private LocalDateTime createdAt;
-        public User(){
-        }
-        public User(String email, String password, String username){
-            this.email = email;
-            this.password = password;
-            this.username = username;
-            this.createdAt = LocalDateTime.now();
-        }
-        //getter
-        public LocalDateTime getCreatedAt() {
-            return createdAt;
-        }
 
-        public String getAvatarUrl() {
-            return avatarUrl;
-        }
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        public String getDescription() {
-            return description;
-        }
+    @Column(unique = true)
+    private String email;
 
-        public String getUsername() {
-            return username;
-        }
+    @Column(unique = true)
+    private String phone;
 
-        public String getPassword() {
-            return password;
-        }
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-        public String getEmail() {
-            return email;
-        }
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-        public Long getId() {
-            return id;
-        }
-        //seter
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-        public void setId(Long id) {
-            this.id = id;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public void setDescription(String description) {
-            this.description = description;
-        }
-
-        public void setAvatarUrl(String avatarUrl) {
-            this.avatarUrl = avatarUrl;
-        }
-
-        public void setCreatedAt(LocalDateTime createdAt) {
-            this.createdAt = createdAt;
-        }
+    // Пустой конструктор нужен JPA
+    public User() {
     }
 
+    // Конструктор для создания пользователя
+    public User(String email, String phone, String passwordHash) {
+        this.email = email;
+        this.phone = phone;
+        this.passwordHash = passwordHash;
+    }
+
+    // Автоматически заполняем даты перед сохранением
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    // Обновляем дату при изменении пользователя
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
+    // Getters и Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+}
