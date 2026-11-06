@@ -1,6 +1,7 @@
 
-package com.example.backend.feature.auth;
+package com.example.backend.feature.auth.register;
 
+import com.example.backend.feature.auth.register.RegisterRequest;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 

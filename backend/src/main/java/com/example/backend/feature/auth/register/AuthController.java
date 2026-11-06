@@ -1,4 +1,4 @@
-package com.example.backend.feature.auth;
+package com.example.backend.feature.auth.register;
 
 import com.example.backend.feature.user.User;
 
@@ -26,7 +26,6 @@ public class AuthController {
     ) {
         System.out.println("Полученная почта: " + request.getEmail());
         System.out.println("Полученный телефон: " + request.getPhone());
-        System.out.println("Полученный пароль: " + request.getPassword());
         User user = authService.register(request);
 
         RegisterResponse response = new RegisterResponse(

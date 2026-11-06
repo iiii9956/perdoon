@@ -1,5 +1,8 @@
 
-package com.example.backend.feature.auth;
+/**
+*
+*/
+package com.example.backend.feature.auth.register;
 
 public class RegisterRequest {
 
