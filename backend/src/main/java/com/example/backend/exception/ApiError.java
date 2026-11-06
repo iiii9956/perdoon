@@ -1,10 +1,10 @@
 package com.example.backend.exception;
 
-public class ApiAuthError {
+public class ApiError {
         private int status;
         private String message;
 
-        public ApiAuthError(int status, String message) {
+        public ApiError(int status, String message) {
             this.status = status;
             this.message = message;
         }

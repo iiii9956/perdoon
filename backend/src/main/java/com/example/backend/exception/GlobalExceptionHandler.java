@@ -12,10 +12,10 @@ public class GlobalExceptionHandler {
 
     // Повторяющаяся почта
     @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ApiAuthError> handleEmailAlreadyExists(
+    public ResponseEntity<ApiError> handleEmailAlreadyExists(
             EmailAlreadyExistsException exception) {
 
-        ApiAuthError error = new ApiAuthError(
+        ApiError error = new ApiError(
                 409,
                 exception.getMessage()
         );
@@ -25,10 +25,10 @@ public class GlobalExceptionHandler {
 
     // Повторяющийся телефон
     @ExceptionHandler(PhoneAlreadyExistsException.class)
-    public ResponseEntity<ApiAuthError> handlePhoneAlreadyExists(
+    public ResponseEntity<ApiError> handlePhoneAlreadyExists(
             PhoneAlreadyExistsException exception) {
 
-        ApiAuthError error = new ApiAuthError(
+        ApiError error = new ApiError(
                 409,
                 exception.getMessage()
         );
@@ -38,10 +38,10 @@ public class GlobalExceptionHandler {
 
     // Ошибки проверки данных: например, пароль слишком короткий
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiAuthError> handleBadRequest(
+    public ResponseEntity<ApiError> handleBadRequest(
             IllegalArgumentException exception) {
 
-        ApiAuthError error = new ApiAuthError(
+        ApiError error = new ApiError(
                 400,
                 exception.getMessage()
         );
@@ -51,10 +51,10 @@ public class GlobalExceptionHandler {
 
     // Другие нарушения ограничений базы данных
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiAuthError> handleDatabaseConflict(
+    public ResponseEntity<ApiError> handleDatabaseConflict(
             DataIntegrityViolationException exception) {
 
-        ApiAuthError error = new ApiAuthError(
+        ApiError error = new ApiError(
                 409,
                 "Нарушено ограничение базы данных. Проверьте введенные данные."
         );
