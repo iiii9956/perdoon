@@ -7,6 +7,8 @@ import com.example.backend.feature.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.backend.exception.EmailAlreadyExistsException;
+import com.example.backend.exception.PhoneAlreadyExistsException;
 
 @Service
 public class AuthService {
@@ -55,26 +57,33 @@ public class AuthService {
             );
         }
 
-        // Проверяем, не занята ли почта
+
         if (email != null && userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException(
+            throw new EmailAlreadyExistsException(
                     "Пользователь с такой почтой уже существует"
             );
         }
 
-        // Проверяем, не занят ли телефон
         if (phone != null && userRepository.existsByPhone(phone)) {
-            throw new IllegalArgumentException(
+            throw new PhoneAlreadyExistsException(
                     "Пользователь с таким номером уже существует"
             );
         }
 
-        // Проверяем пароль
+
+
         if (password == null || password.length() < 8) {
             throw new IllegalArgumentException(
                     "Пароль должен содержать минимум 8 символов"
             );
         }
+
+        if (password.length() > 64) {
+            throw new IllegalArgumentException(
+                    "Пароль не должен превышать 64 символа"
+            );
+        }
+
 
         // Создаём хеш пароля
         String passwordHash = passwordEncoder.encode(password);
