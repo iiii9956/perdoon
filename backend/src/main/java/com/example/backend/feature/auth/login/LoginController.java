@@ -1,8 +1,10 @@
 
+
 package com.example.backend.feature.auth.login;
 
 import com.example.backend.feature.user.User;
-import org.springframework.http.HttpStatus;
+import com.example.backend.feature.auth.jwt.JwtService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,29 +13,31 @@ import org.springframework.web.bind.annotation.*;
 public class LoginController {
 
     private final LoginService loginService;
+    private final JwtService jwtService;
 
-    // Получаем LoginService через конструктор
-    public LoginController(LoginService loginService) {
+    // Spring автоматически передаст необходимые сервисы через конструктор
+    public LoginController(LoginService loginService, JwtService jwtService) {
         this.loginService = loginService;
+        this.jwtService = jwtService;
     }
 
-    // POST /api/auth/login — вход пользователя
+    // Авторизация пользователя
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
 
-        // Проверяем логин и пароль через сервис
+        // Проверяем логин и пароль
         User user = loginService.login(request);
+
+        // Создаём JWT-токен для пользователя
+        String token = jwtService.generateToken(user.getId());
 
         // Формируем ответ
         LoginResponse response = new LoginResponse(
                 user.getId(),
-                null, // Пока JWT не реализовали
+                token,
                 "Авторизация успешна"
         );
 
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(response);
+        return ResponseEntity.ok(response);
     }
 }
