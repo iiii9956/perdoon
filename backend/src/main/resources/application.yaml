@@ -8,6 +8,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/social_network_bd
     driver-class-name: org.postgresql.Driver
   jpa:
+    open-in-view: false
     show-sql: true
     hibernate:
       ddl-auto: update
