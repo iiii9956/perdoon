@@ -1,8 +1,10 @@
 
 package com.example.backend.config;
 
-import com.example.backend.feature.auth.jwt.JwtAuthenticationFilter;
 
+import com.example.backend.exception.JwtAuthenticationEntryPoint;
+import com.example.backend.feature.auth.jwt.JwtAuthenticationFilter;
+import com.example.backend.exception.JwtAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,10 +18,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     // Передаём JWT-фильтр через конструктор
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     @Bean
@@ -50,6 +54,9 @@ public class SecurityConfig {
 
                             // Остальные запросы требуют авторизации
                             .anyRequest().authenticated()
+                    )
+                    .exceptionHandling(exception -> exception
+                            .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                     )
 
                     // Отключаем хранение пользовательских сессий
