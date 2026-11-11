@@ -1,6 +1,9 @@
 
 package com.example.backend.feature.auth.jwt;
 
+import com.example.backend.feature.user.User;
+import com.example.backend.feature.user.UserRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,10 +22,15 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    // Внедряем JwtService через конструктор
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    // Внедряем сервис JWT и репозиторий пользователей
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserRepository userRepository
+    ) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -32,12 +40,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Получаем заголовок Authorization из HTTP-запроса
+        // Получаем заголовок Authorization
         String authorizationHeader = request.getHeader("Authorization");
 
-        // Если заголовка нет или он не начинается с Bearer,
-        // пропускаем запрос дальше.
-        // Защищённость запроса будет определять SecurityConfig.
+        // Проверяем наличие Bearer-токена
         if (authorizationHeader == null ||
                 !authorizationHeader.startsWith("Bearer ")) {
 
@@ -45,30 +51,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Убираем слово Bearer и оставляем только сам JWT
+        // Извлекаем JWT из заголовка
         String token = authorizationHeader.substring(7);
 
-        // Проверяем корректность токена
+        // Проверяем подпись и срок действия JWT
         if (!jwtService.isTokenValid(token)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Получаем ID пользователя из токена
-        Long userId = jwtService.getUserIdFromToken(token);
+        // Получаем ID пользователя из JWT
+        Long userId;
 
-        // Создаём объект авторизации для Spring Security
+        try {
+            userId = jwtService.getUserIdFromToken(token);
+        } catch (IllegalArgumentException e) {
+            // Если ID некорректен, продолжаем без авторизации
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Ищем пользователя в PostgreSQL
+        User user = userRepository.findById(userId)
+                .orElse(null);
+
+        // Если пользователя нет или у него не назначена роль,
+        // не создаём авторизацию
+        if (user == null || user.getRole() == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Получаем настоящую роль пользователя из базы
+        String role = "ROLE_" + user.getRole().name();
+
+        // Создаём объект авторизации Spring Security
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        userId.toString(),
+                        user.getId().toString(),
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                        List.of(new SimpleGrantedAuthority(role))
                 );
 
-        // Записываем авторизацию в SecurityContext
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        // Сохраняем авторизацию в SecurityContext
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
 
-        // Передаём запрос дальше по цепочке фильтров
+        // Передаём запрос дальше
         filterChain.doFilter(request, response);
     }
 }
+

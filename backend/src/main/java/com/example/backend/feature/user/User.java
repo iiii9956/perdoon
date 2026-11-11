@@ -3,6 +3,7 @@ package com.example.backend.feature.user;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.example.backend.feature.role.Role;
 
 @Entity
 @Table(name = "users")
@@ -11,7 +12,10 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    // Роль пользователя в социальной сети
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
     @Column(unique = true)
     private String email;
 
@@ -36,6 +40,7 @@ public class User {
         this.email = email;
         this.phone = phone;
         this.passwordHash = passwordHash;
+        this.role = Role.USER;
     }
 
     // Автоматически заполняем даты перед сохранением
@@ -89,5 +94,13 @@ public class User {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

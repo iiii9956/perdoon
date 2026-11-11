@@ -3,6 +3,7 @@ package com.example.backend.feature.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.example.backend.feature.role.Role;
 
 import java.util.Optional;
 
@@ -11,6 +12,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Поиск пользователя по электронной почте
     Optional<User> findByEmail(String email);
+
+    // Подсчитываем количество пользователей с указанной ролью
+    long countByRole(Role role);
 
     // Поиск пользователя по номеру телефона
     Optional<User> findByPhone(String phone);
