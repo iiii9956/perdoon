@@ -1,5 +1,6 @@
 package com.example.backend.feature.auth.register;
 
+import com.example.backend.feature.auth.register.dto.RegisterResponse;
 import com.example.backend.feature.user.User;
 
 import org.springframework.http.HttpStatus;
@@ -8,12 +9,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-public class AuthController {
+public class RegisterController {
 
-    private final AuthService authService;
+    private final RegisterService authService;
 
     // Внедряем AuthService
-    public AuthController(AuthService authService) {
+    public RegisterController(RegisterService authService) {
         this.authService = authService;
     }
 

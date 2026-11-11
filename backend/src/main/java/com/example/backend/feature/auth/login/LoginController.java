@@ -2,6 +2,7 @@
 
 package com.example.backend.feature.auth.login;
 
+import com.example.backend.feature.auth.login.dto.LoginResponse;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.auth.jwt.JwtService;
 

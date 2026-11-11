@@ -1,7 +1,6 @@
 
 package com.example.backend.feature.auth.register;
 
-import com.example.backend.feature.auth.register.RegisterRequest;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 
@@ -12,12 +11,12 @@ import com.example.backend.exception.EmailAlreadyExistsException;
 import com.example.backend.exception.PhoneAlreadyExistsException;
 
 @Service
-public class AuthService {
+public class RegisterService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthService(
+    public RegisterService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder
     ) {

@@ -1,4 +1,4 @@
-package com.example.backend.feature.auth.login;
+package com.example.backend.feature.auth.login.dto;
 
 public class LoginResponse {
 

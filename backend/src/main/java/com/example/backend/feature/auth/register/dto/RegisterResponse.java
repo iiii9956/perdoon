@@ -1,4 +1,4 @@
-package com.example.backend.feature.auth.register;
+package com.example.backend.feature.auth.register.dto;
 
 public class RegisterResponse {
 

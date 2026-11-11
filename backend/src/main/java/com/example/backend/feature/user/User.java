@@ -30,18 +30,28 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    @Column(unique = true, length = 30)
+    private String username;
+
+    @Column(length = 500)
+    private String description;
+
+    @Column(name = "avatar_url", length = 1000)
+    private String avatarUrl;
 
     // Пустой конструктор нужен JPA
     public User() {
     }
 
     // Конструктор для создания пользователя
-    public User(String email, String phone, String passwordHash) {
-        this.email = email;
-        this.phone = phone;
-        this.passwordHash = passwordHash;
-        this.role = Role.USER;
-    }
+    public User(String email, String phone, String passwordHash)
+        {
+            this.email = email;
+            this.phone = phone;
+            this.passwordHash = passwordHash;
+            this.role = Role.USER;
+        }
+
 
     // Автоматически заполняем даты перед сохранением
     @PrePersist
@@ -59,6 +69,31 @@ public class User {
     }
 
     // Getters и Setters
+
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 
     public Long getId() {
         return id;

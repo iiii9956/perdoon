@@ -24,5 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Проверка, существует ли пользователь с таким номером
     boolean existsByPhone(String phone);
+
+    //Проверит, занят ли никнейм другим пользователем
+    boolean existsByUsernameAndIdNot(String username, Long id);
 }
 
