@@ -1,5 +1,7 @@
 
-package com.example.backend.feature.user;
+package com.example.backend.feature.user.dto;
+
+import com.example.backend.feature.user.User;
 
 import java.time.LocalDateTime;
 
