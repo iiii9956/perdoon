@@ -2,9 +2,10 @@
 package com.example.backend.config;
 
 
+import com.example.backend.exception.JwtAccessDeniedHandler;
 import com.example.backend.exception.JwtAuthenticationEntryPoint;
 import com.example.backend.feature.auth.jwt.JwtAuthenticationFilter;
-import com.example.backend.exception.JwtAuthenticationEntryPoint;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,11 +20,13 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     // Передаём JWT-фильтр через конструктор
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, JwtAccessDeniedHandler jwtAccessDeniedHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
     }
 
     @Bean
@@ -51,12 +54,15 @@ public class SecurityConfig {
                                     "/api/auth/register",
                                     "/api/auth/login"
                             ).permitAll()
+                            // Доступ к административным запросам только для ADMIN
+                            .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                             // Остальные запросы требуют авторизации
                             .anyRequest().authenticated()
                     )
                     .exceptionHandling(exception -> exception
                             .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                            .accessDeniedHandler(jwtAccessDeniedHandler)
                     )
 
                     // Отключаем хранение пользовательских сессий
