@@ -1,6 +1,7 @@
 
 package com.example.backend.feature.auth.jwt;
 
+import com.example.backend.feature.auth.logout.RevokedTokenService;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 
@@ -23,14 +24,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
-
+    private final RevokedTokenService revokedTokenService;
     // Внедряем сервис JWT и репозиторий пользователей
-    public JwtAuthenticationFilter(
-            JwtService jwtService,
-            UserRepository userRepository
-    ) {
+
+
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository, RevokedTokenService revokedTokenService) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.revokedTokenService = revokedTokenService;
     }
 
     @Override
@@ -55,10 +56,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authorizationHeader.substring(7);
 
         // Проверяем подпись и срок действия JWT
-        if (!jwtService.isTokenValid(token)) {
+
+        if (!jwtService.isTokenValid(token) ||
+                revokedTokenService.isTokenRevoked(token)) {
+
             filterChain.doFilter(request, response);
             return;
         }
+
 
         // Получаем ID пользователя из JWT
         Long userId;
