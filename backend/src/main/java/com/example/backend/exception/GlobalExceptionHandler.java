@@ -1,11 +1,14 @@
 
 package com.example.backend.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -15,10 +18,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleEmailAlreadyExists(
             EmailAlreadyExistsException exception) {
 
-        ApiError error = new ApiError(
-                409,
-                exception.getMessage()
-        );
+        ApiError error = new ApiError(409, exception.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
@@ -28,28 +28,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handlePhoneAlreadyExists(
             PhoneAlreadyExistsException exception) {
 
-        ApiError error = new ApiError(
-                409,
-                exception.getMessage()
-        );
+        ApiError error = new ApiError(409, exception.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
-    // Ошибки проверки данных: например, пароль слишком короткий
+    // Ошибки проверки данных
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleBadRequest(
             IllegalArgumentException exception) {
 
-        ApiError error = new ApiError(
-                400,
-                exception.getMessage()
-        );
+        ApiError error = new ApiError(400, exception.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    // Другие нарушения ограничений базы данных
+    // Нарушения ограничений базы данных
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDatabaseConflict(
             DataIntegrityViolationException exception) {
@@ -61,5 +55,20 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
-}
 
+    // Ошибки, возникающие в сервисах
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatus(
+            ResponseStatusException exception) {
+
+        int status = exception.getStatusCode().value();
+
+        String message = exception.getReason() != null
+                ? exception.getReason()
+                : "Произошла ошибка";
+
+        ApiError error = new ApiError(status, message);
+
+        return ResponseEntity.status(exception.getStatusCode()).body(error);
+    }
+}
