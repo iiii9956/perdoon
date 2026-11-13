@@ -1,5 +1,5 @@
 
-package com.example.backend.feature.comment;
+package com.example.backend.feature.post.comment;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

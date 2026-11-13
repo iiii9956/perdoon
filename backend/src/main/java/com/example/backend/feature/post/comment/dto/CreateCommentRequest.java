@@ -1,5 +1,5 @@
 
-package com.example.backend.feature.comment.dto;
+package com.example.backend.feature.post.comment.dto;
 
 public class CreateCommentRequest {
 

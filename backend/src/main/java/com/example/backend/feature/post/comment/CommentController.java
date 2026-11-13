@@ -1,9 +1,9 @@
 
-package com.example.backend.feature.comment;
+package com.example.backend.feature.post.comment;
 
-import com.example.backend.feature.comment.dto.CommentResponse;
-import com.example.backend.feature.comment.dto.CreateCommentRequest;
-import com.example.backend.feature.comment.dto.UpdateCommentRequest;
+import com.example.backend.feature.post.comment.dto.CommentResponse;
+import com.example.backend.feature.post.comment.dto.CreateCommentRequest;
+import com.example.backend.feature.post.comment.dto.UpdateCommentRequest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

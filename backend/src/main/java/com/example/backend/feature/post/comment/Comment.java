@@ -1,5 +1,5 @@
 
-package com.example.backend.feature.comment;
+package com.example.backend.feature.post.comment;
 
 import com.example.backend.feature.post.Post;
 import com.example.backend.feature.user.User;
