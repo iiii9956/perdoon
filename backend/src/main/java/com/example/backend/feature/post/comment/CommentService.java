@@ -6,6 +6,7 @@ import com.example.backend.feature.post.comment.dto.CreateCommentRequest;
 import com.example.backend.feature.post.comment.dto.UpdateCommentRequest;
 import com.example.backend.feature.post.Post;
 import com.example.backend.feature.post.PostRepository;
+import com.example.backend.feature.role.Role;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 
@@ -118,7 +119,14 @@ public class CommentService {
 
         Comment comment = findComment(postId, commentId);
 
-        if (!comment.getAuthor().getId().equals(userId)) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Пользователь не найден"
+                ));
+
+        if (!comment.getAuthor().getId().equals(userId)
+                && currentUser.getRole() != Role.MODERATOR
+                && currentUser.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Нельзя удалить чужой комментарий"

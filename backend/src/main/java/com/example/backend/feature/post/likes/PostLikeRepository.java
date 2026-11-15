@@ -20,5 +20,7 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
 
     // Посчитать количество лайков публикации
     long countByPostId(Long postId);
+
+    void deleteAllByPostId(Long postId);
 }
 

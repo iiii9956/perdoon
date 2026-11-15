@@ -1,9 +1,12 @@
 
 package com.example.backend.feature.post;
 
+import com.example.backend.feature.post.comment.CommentRepository;
 import com.example.backend.feature.post.dto.CreatePostRequest;
 import com.example.backend.feature.post.dto.UpdatePostRequest;
 import com.example.backend.feature.post.dto.PostResponse;
+import com.example.backend.feature.post.likes.PostLikeRepository;
+import com.example.backend.feature.role.Role;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 
@@ -19,11 +22,14 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
+    private final PostLikeRepository postLikeRepository;
 
-    public PostService(PostRepository postRepository,
-                       UserRepository userRepository) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, CommentRepository commentRepository, PostLikeRepository postLikeRepository) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
+        this.commentRepository = commentRepository;
+        this.postLikeRepository = postLikeRepository;
     }
 
     // Получить ленту постов всех пользователей, кроме своих
@@ -117,14 +123,25 @@ public class PostService {
                         "Публикация не найдена"
                 ));
 
-        // Проверяем владельца публикации
-        if (!post.getAuthor().getId().equals(userId)) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Пользователь не найден"
+                ));
+
+        boolean isAuthor = post.getAuthor().getId().equals(userId);
+        boolean isModerator = currentUser.getRole() == Role.MODERATOR
+                || currentUser.getRole() == Role.ADMIN;
+
+        if (!isAuthor && !isModerator) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Нельзя удалить чужую публикацию"
             );
         }
 
+        commentRepository.deleteAllByPostId(postId);
+        postLikeRepository.deleteAllByPostId(postId);
         postRepository.delete(post);
     }
 
