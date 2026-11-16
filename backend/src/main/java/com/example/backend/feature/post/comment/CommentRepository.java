@@ -14,4 +14,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     // Получить комментарии конкретного пользователя
     List<Comment> findAllByAuthorIdOrderByCreatedAtDesc(Long authorId);
+
+    void deleteAllByAuthorId(Long authorId);
 }

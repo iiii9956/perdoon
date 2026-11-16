@@ -2,6 +2,10 @@
 package com.example.backend.feature.admin;
 
 
+import com.example.backend.feature.post.Post;
+import com.example.backend.feature.post.PostRepository;
+import com.example.backend.feature.post.comment.CommentRepository;
+import com.example.backend.feature.post.likes.PostLikeRepository;
 import com.example.backend.feature.role.Role;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
@@ -11,13 +15,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
+    private final PostLikeRepository postLikeRepository;
 
-    public AdminService(UserRepository userRepository) {
+    public AdminService(UserRepository userRepository, PostRepository postRepository, CommentRepository commentRepository, PostLikeRepository postLikeRepository) {
         this.userRepository = userRepository;
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+        this.postLikeRepository = postLikeRepository;
     }
 
     @Transactional
@@ -75,5 +87,55 @@ public class AdminService {
         User updatedUser = userRepository.save(user);
 
         return new AdminUserResponse(updatedUser);
+    }
+    @Transactional
+    public void deleteUser(Long targetUserId, String currentAdminId) {
+
+        // Запрещаем удалять собственный аккаунт
+        if (targetUserId.equals(Long.parseLong(currentAdminId))) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Нельзя удалить собственный аккаунт"
+            );
+        }
+
+        // Ищем пользователя
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Пользователь не найден"
+                ));
+
+        // Не разрешаем удалить последнего администратора
+        if (user.getRole() == Role.ADMIN) {
+            long adminCount = userRepository.countByRole(Role.ADMIN);
+
+            if (adminCount <= 1) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Нельзя удалить последнего администратора"
+                );
+            }
+        }
+
+        // Получаем все посты пользователя
+        List<Post> posts =
+                postRepository.findAllByAuthorIdOrderByCreatedAtDesc(targetUserId);
+
+        // Удаляем комментарии и лайки под его постами
+        for (Post post : posts) {
+            commentRepository.deleteAllByPostId(post.getId());
+            postLikeRepository.deleteAllByPostId(post.getId());
+        }
+
+        // Удаляем комментарии и лайки пользователя под чужими постами
+        commentRepository.deleteAllByAuthorId(targetUserId);
+        postLikeRepository.deleteAllByUserId(targetUserId);
+
+        // Удаляем посты пользователя
+        postRepository.deleteAll(posts);
+
+        // Удаляем аккаунт
+        userRepository.delete(user);
     }
 }

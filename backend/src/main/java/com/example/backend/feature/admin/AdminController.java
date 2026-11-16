@@ -28,4 +28,11 @@ public class AdminController {
                 request.getRole()
         );
     }
+    @DeleteMapping("/users/{id}")
+    public void deleteUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String currentUserId
+    ) {
+        adminService.deleteUser(id, currentUserId);
+    }
 }
