@@ -1,0 +1,70 @@
+.postHeader {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: start;
+    gap: 20px; /* 1. Добавляем отступ, чтобы длинный заголовок не прилипал вплотную к автору */
+    
+    h1 {
+        font-size: 40px;
+        
+        /* 2. Заставляем заголовок занимать свободное место, но не больше */
+        flex: 1; 
+        
+        /* 3. Разрешаем принудительно переносить очень длинные слова без пробелов */
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
+}
+
+.authorBox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    
+    /* 4. Запрещаем блоку с автором сжиматься под давлением длинного текста */
+    flex-shrink: 0; 
+}
+
+.authorAvatar {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0px 3px rgba(0, 0, 0, 0.2);
+
+}
+.postActions{
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    Input{
+        width:100%;
+    }
+    
+    
+}
+.commentSection{
+    display: flex;
+    flex-direction: column;
+}
+.commentActions{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: stretch;
+        
+}
+.comment{
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    align-items: start;
+    gap:10px;
+}
+.commentDate{
+    color:gray;
+    font-size: 14px;
+    font-weight: lighter;
+}

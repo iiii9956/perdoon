@@ -1,0 +1,75 @@
+.feedWrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.postHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.authorInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.nickname {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.dates {
+    font-size: 12px;
+    color: #666;
+}
+
+.postText {
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+    margin-bottom: 8px;
+}
+
+.expandBtn {
+    background: none;
+    border: none;
+    color: #555;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 12px;
+    align-self: flex-start;
+}
+
+.expandBtn:hover {
+    text-decoration: underline;
+}
+
+.actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 8px;
+}
+
+.loadMoreWrapper {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0;
+}

@@ -1,0 +1,1 @@
+<Route path="/post/:id/comments" element={<Comments />} />

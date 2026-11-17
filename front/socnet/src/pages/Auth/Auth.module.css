@@ -1,0 +1,25 @@
+.authContainer{
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+}
+.authForm{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.logSwitch{
+    text-align: center;
+    margin-top: 8px;
+    font-size: 12px;
+    cursor: default;
+    line-height: 24px;
+    span{
+        cursor: pointer;
+        color: rgb(81, 81, 81);
+        text-decoration: underline;
+    }
+}

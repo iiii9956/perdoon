@@ -1,0 +1,13 @@
+.boxItem{
+    padding: 12px;
+    margin: 8px 16px;
+    background-color: rgba(0,0,0,0);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+.boxItem:hover{
+    transition: 0.2s;
+    background-color: rgba(0,0,0,0.07);
+}
