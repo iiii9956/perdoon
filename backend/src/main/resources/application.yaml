@@ -6,8 +6,8 @@ spring:
     name: social-network
 
   datasource:
-    username: postgres
-    password: "29092007"
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     url: jdbc:postgresql://localhost:5432/social_network_bd
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -26,5 +26,5 @@ app:
 jwt:
   # Ключ должен быть Base64 и после декодирования быть не короче 32 байт.
   # На другом компьютере задайте тот же JWT_SECRET, если нужны старые токены.
-  secret: ${JWT_SECRET:dGhpcy1pcy1hLWRldi1zZWNyZXQta2V5LWNoYW5nZS1tZSEh}
+  secret: ${JWT_SECRET}
   expiration: 86400000
