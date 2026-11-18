@@ -34,7 +34,7 @@ class RegisterServiceTest {
 
         assertThrows(
                 EmailAlreadyExistsException.class,
-                () -> registerService.register(new RegisterRequest(" A@mail.com ", null, "password1"))
+                () -> registerService.register(new RegisterRequest(" A@mail.com ", null, "password1","tipochek_one"))
         );
     }
 
@@ -42,7 +42,7 @@ class RegisterServiceTest {
     void rejectsShortPassword() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> registerService.register(new RegisterRequest("a@mail.com", null, "1234567"))
+                () -> registerService.register(new RegisterRequest("a@mail.com", null, "1234567","tipochek_two"))
         );
     }
 
@@ -52,7 +52,7 @@ class RegisterServiceTest {
         when(passwordEncoder.encode("password1")).thenReturn("hash");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        User user = registerService.register(new RegisterRequest(" A@mail.com ", "   ", "password1"));
+        User user = registerService.register(new RegisterRequest(" A@mail.com ", "   ", "password1", "tipochek_tree"));
 
         assertEquals("a@mail.com", user.getEmail());
         assertEquals(null, user.getPhone());

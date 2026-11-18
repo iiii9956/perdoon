@@ -30,7 +30,7 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-    @Column(unique = true, length = 30)
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
 
     @Column(length = 500)
@@ -78,6 +78,8 @@ public class User {
     public void setUsername(String username) {
         this.username = username;
     }
+
+
 
     public String getDescription() {
         return description;

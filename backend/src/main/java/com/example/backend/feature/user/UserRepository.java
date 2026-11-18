@@ -27,5 +27,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     //Проверит, занят ли никнейм другим пользователем
     boolean existsByUsernameAndIdNot(String username, Long id);
+
+    //проверяет, занят ли никнейм.
+    boolean existsByUsername(String username);
 }
 
