@@ -31,6 +31,7 @@ public class RegisterService {
         String email = request.getEmail();
         String phone = request.getPhone();
         String password = request.getPassword();
+        String username = request.getUsername();
 
         // Убираем лишние пробелы
         if (email != null) {
@@ -84,12 +85,29 @@ public class RegisterService {
             );
         }
 
+        // Проверяем никнейм
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Укажите никнейм");
+        }
+
+        username = username.trim().toLowerCase();
+
+        if (!username.matches("^[a-z0-9_]{3,30}$")) {
+            throw new IllegalArgumentException(
+                    "Никнейм должен содержать от 3 до 30 символов: латинские буквы, цифры и _"
+            );
+        }
+
+        if (userRepository.existsByUsername(username)) {
+            throw new IllegalArgumentException("Этот никнейм уже занят");
+        }
 
         // Создаём хеш пароля
         String passwordHash = passwordEncoder.encode(password);
 
         // Создаём пользователя
         User user = new User(email, phone, passwordHash);
+        user.setUsername(username);
 
         // Сохраняем пользователя в базе данных
         return userRepository.save(user);

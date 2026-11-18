@@ -4,6 +4,7 @@ package com.example.backend.feature.admin;
 
 import com.example.backend.feature.role.Role;
 import com.example.backend.feature.user.User;
+import com.example.backend.feature.user.UserCleanupService;
 import com.example.backend.feature.user.UserRepository;
 
 import org.springframework.http.HttpStatus;
@@ -15,9 +16,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final UserCleanupService userCleanupService;
 
-    public AdminService(UserRepository userRepository) {
+    public AdminService(UserRepository userRepository, UserCleanupService userCleanupService) {
         this.userRepository = userRepository;
+        this.userCleanupService = userCleanupService;
     }
 
     @Transactional
@@ -75,5 +78,37 @@ public class AdminService {
         User updatedUser = userRepository.save(user);
 
         return new AdminUserResponse(updatedUser);
+    }
+    @Transactional
+    public void deleteUser(Long targetUserId, String currentAdminId) {
+
+        // Запрещаем удалять собственный аккаунт
+        if (targetUserId.equals(Long.parseLong(currentAdminId))) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Нельзя удалить собственный аккаунт"
+            );
+        }
+
+        // Ищем пользователя
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Пользователь не найден"
+                ));
+
+        // Не разрешаем удалить последнего администратора
+        if (user.getRole() == Role.ADMIN) {
+            long adminCount = userRepository.countByRole(Role.ADMIN);
+
+            if (adminCount <= 1) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Нельзя удалить последнего администратора"
+                );
+            }
+        }
+
+        userCleanupService.deleteUserAndRelatedData(user);
     }
 }

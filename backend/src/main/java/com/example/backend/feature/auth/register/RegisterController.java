@@ -25,8 +25,6 @@ public class RegisterController {
             @RequestBody RegisterRequest request
 
     ) {
-        System.out.println("Полученная почта: " + request.getEmail());
-        System.out.println("Полученный телефон: " + request.getPhone());
         User user = authService.register(request);
 
         RegisterResponse response = new RegisterResponse(

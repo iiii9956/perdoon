@@ -1,7 +1,7 @@
 
-package com.example.backend.feature.comment.dto;
+package com.example.backend.feature.post.comment.dto;
 
-import com.example.backend.feature.comment.Comment;
+import com.example.backend.feature.post.comment.Comment;
 
 import java.time.LocalDateTime;
 
