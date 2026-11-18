@@ -2,12 +2,9 @@
 package com.example.backend.feature.admin;
 
 
-import com.example.backend.feature.post.Post;
-import com.example.backend.feature.post.PostRepository;
-import com.example.backend.feature.post.comment.CommentRepository;
-import com.example.backend.feature.post.likes.PostLikeRepository;
 import com.example.backend.feature.role.Role;
 import com.example.backend.feature.user.User;
+import com.example.backend.feature.user.UserCleanupService;
 import com.example.backend.feature.user.UserRepository;
 
 import org.springframework.http.HttpStatus;
@@ -15,21 +12,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 @Service
 public class AdminService {
 
     private final UserRepository userRepository;
-    private final PostRepository postRepository;
-    private final CommentRepository commentRepository;
-    private final PostLikeRepository postLikeRepository;
+    private final UserCleanupService userCleanupService;
 
-    public AdminService(UserRepository userRepository, PostRepository postRepository, CommentRepository commentRepository, PostLikeRepository postLikeRepository) {
+    public AdminService(UserRepository userRepository, UserCleanupService userCleanupService) {
         this.userRepository = userRepository;
-        this.postRepository = postRepository;
-        this.commentRepository = commentRepository;
-        this.postLikeRepository = postLikeRepository;
+        this.userCleanupService = userCleanupService;
     }
 
     @Transactional
@@ -118,24 +109,6 @@ public class AdminService {
             }
         }
 
-        // Получаем все посты пользователя
-        List<Post> posts =
-                postRepository.findAllByAuthorIdOrderByCreatedAtDesc(targetUserId);
-
-        // Удаляем комментарии и лайки под его постами
-        for (Post post : posts) {
-            commentRepository.deleteAllByPostId(post.getId());
-            postLikeRepository.deleteAllByPostId(post.getId());
-        }
-
-        // Удаляем комментарии и лайки пользователя под чужими постами
-        commentRepository.deleteAllByAuthorId(targetUserId);
-        postLikeRepository.deleteAllByUserId(targetUserId);
-
-        // Удаляем посты пользователя
-        postRepository.deleteAll(posts);
-
-        // Удаляем аккаунт
-        userRepository.delete(user);
+        userCleanupService.deleteUserAndRelatedData(user);
     }
 }

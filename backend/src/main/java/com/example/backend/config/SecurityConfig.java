@@ -23,15 +23,18 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final AllowedOrigins allowedOrigins;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-            JwtAccessDeniedHandler jwtAccessDeniedHandler
+            JwtAccessDeniedHandler jwtAccessDeniedHandler,
+            AllowedOrigins allowedOrigins
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Bean
@@ -55,7 +58,8 @@ public class SecurityConfig {
                             // Разрешаем регистрацию и авторизацию без токена
                             .requestMatchers(
                                     "/api/auth/register",
-                                    "/api/auth/login"
+                                    "/api/auth/login",
+                                    "/ws/**"
                             ).permitAll()
                             // Доступ к административным запросам только для ADMIN
                             .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -88,7 +92,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(allowedOrigins.getOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

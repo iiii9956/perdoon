@@ -1,3 +1,6 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: social-network
@@ -15,6 +18,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+app:
+  cors:
+    # Через запятую. На другом ноутбуке добавьте адрес фронтенда, например http://192.168.0.15:5173
+    allowed-origins: http://localhost:5173
+
 jwt:
-  secret: ${JWT_SECRET}
+  # Ключ должен быть Base64 и после декодирования быть не короче 32 байт.
+  # На другом компьютере задайте тот же JWT_SECRET, если нужны старые токены.
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLWRldi1zZWNyZXQta2V5LWNoYW5nZS1tZSEh}
   expiration: 86400000

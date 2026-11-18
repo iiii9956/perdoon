@@ -1,8 +1,7 @@
 
 package com.example.backend.exception;
 
-import jakarta.servlet.http.HttpServletRequest;
-
+import io.jsonwebtoken.JwtException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +30,12 @@ public class GlobalExceptionHandler {
         ApiError error = new ApiError(409, exception.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiError> handleInvalidToken(JwtException exception) {
+        ApiError error = new ApiError(401, "Недействительный токен");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     // Ошибки проверки данных

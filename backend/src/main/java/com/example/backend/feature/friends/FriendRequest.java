@@ -13,12 +13,12 @@ public class FriendRequest {
     private Long id;
 
     // Кто отправил заявку
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
     // Кому отправили заявку
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 

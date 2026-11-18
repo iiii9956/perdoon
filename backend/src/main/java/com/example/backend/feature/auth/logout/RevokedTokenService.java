@@ -3,8 +3,10 @@ package com.example.backend.feature.auth.logout;
 
 import com.example.backend.feature.auth.jwt.JwtService;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,6 +29,13 @@ public class RevokedTokenService {
     // Отозвать токен
     @Transactional
     public void revokeToken(String token) {
+
+        if (!jwtService.isTokenValid(token)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Недействительный токен"
+            );
+        }
 
         String tokenHash = hashToken(token);
 

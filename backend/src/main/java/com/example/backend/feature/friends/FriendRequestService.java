@@ -65,6 +65,14 @@ public class FriendRequestService {
             );
         }
 
+        if (friendRequestRepository.countBetweenUsers(
+                senderId, receiverId, FriendRequestStatus.ACCEPTED) > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Вы уже друзья"
+            );
+        }
+
         FriendRequest request = new FriendRequest();
         request.setSender(sender);
         request.setReceiver(receiver);

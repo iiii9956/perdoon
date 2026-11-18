@@ -14,9 +14,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserCleanupService userCleanupService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserCleanupService userCleanupService) {
         this.userRepository = userRepository;
+        this.userCleanupService = userCleanupService;
     }
 
     public Optional<User> findByEmail(String email) {
@@ -40,7 +42,12 @@ public class UserService {
     }
 
     public void deleteById(Long id) {
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Пользователь не найден"
+                ));
+        userCleanupService.deleteUserAndRelatedData(user);
     }
 
     public long countUsers() {

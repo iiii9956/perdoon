@@ -20,7 +20,7 @@ public class Post {
     private User author;
 
     // Текст публикации
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     // Ссылка на изображение публикации
