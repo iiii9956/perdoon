@@ -5,85 +5,75 @@ import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
 import { restApi } from "../../api/restApi";
 import style from "./Profile.module.css";
+import TextArea from "../../components/TextArea/TextArea";
 
-const MOCK_USER_ME = {
-    id: 1,
-    username: "Денис Елисеев",
-    avatar: "https://placehold.co/200x200",
-    role: "ADMIN",
-    createdAt: "12 сентября 2026",
-    bio: "Студент 3-ИС4. Пишу фронтенд для нашей соцсети на React.",
-    email: "4p000k3@gmail.com",
-    phone: "+7 (999) 123-45-67"
-};
-
-const MOCK_USER_OTHER = {
-    id: 2,
-    username: "Анастасия Смирнова",
-    avatar: "https://placehold.co/200x200",
-    role: "MODERATOR",
-    createdAt: "14 сентября 2026",
-    bio: "Делаю бэкенд и слежу за порядком в комментариях."
-};
-
-const MOCK_USER_POSTS = [
-    {
-        id: 101,
-        content: "Первый пост на моей стене! Проверяем отображение профиля.",
-        createdAt: "17 ноября 2026, 15:00",
-        updatedAt: null
-    }
-];
 
 export default function Profile({ isOwn }) {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [user, setUser] = useState(isOwn ? MOCK_USER_ME : MOCK_USER_OTHER);
-    const [posts, setPosts] = useState(MOCK_USER_POSTS);
+    const [user, setUser] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-    const [editUsername, setEditUsername] = useState(user.username);
-    const [editBio, setEditBio] = useState(user.bio || "");
+    const [editUsername, setEditUsername] = useState("");
+    const [editDescription, setEditDescription] = useState("");
 
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
 
     const [newPostText, setNewPostText] = useState("");
+    const [editingPostId, setEditingPostId] = useState(null);
+    const [editingPostText, setEditingPostText] = useState("");
+
     const [friendRequested, setFriendRequested] = useState(false);
 
+    const USERNAME_REGEX = /^[a-zA-Zа-яА-ЯёЁ0-9_]{3,30}$/;
+
+    const formatDate = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? dateString : date.toLocaleString("ru-RU");
+    };
+
     useEffect(() => {
-        // Сразу переключаем моковые данные при переходе между /profile/me и /profile/:id
-        const fallbackUser = isOwn ? MOCK_USER_ME : MOCK_USER_OTHER;
-        setUser(fallbackUser);
-        setEditUsername(fallbackUser.username);
-        setEditBio(fallbackUser.bio || "");
         setIsEditingProfile(false);
         setIsChangingPassword(false);
 
         async function loadProfileData() {
             try {
+                setLoading(true);
                 if (isOwn) {
                     const [meRes, myPostsRes] = await Promise.all([
                         restApi.users.getMe(),
                         restApi.posts.getMyPosts()
                     ]);
                     setUser(meRes.data);
-                    setEditUsername(meRes.data.username);
-                    setEditBio(meRes.data.bio || "");
-                    setPosts(myPostsRes.data);
+                    setEditUsername(meRes.data.username || "");
+                    setEditDescription(meRes.data.description || "");
+                    setPosts(Array.isArray(myPostsRes.data) ? myPostsRes.data : []);
                 } else if (id) {
-                    const [userRes, userPostsRes] = await Promise.all([
-                        restApi.users.getUserProfile(id),
-                        restApi.users.getUserPosts(id)
-                    ]);
+                    const userRes = await restApi.users.getUserProfile(id);
                     setUser(userRes.data);
-                    setPosts(userPostsRes.data);
+                    try {
+                        const userPostsRes = await restApi.users.getUserPosts(id);
+                        setPosts(Array.isArray(userPostsRes.data) ? userPostsRes.data : []);
+                    } catch {
+                        // Если эндпоинт чужих постов ещё не добавлен на бэке — фильтруем из общей ленты
+                        const feedRes = await restApi.posts.getFeed();
+                        if (Array.isArray(feedRes.data)) {
+                            setPosts(feedRes.data.filter((p) => String(p.authorId) === String(id)));
+                        }
+                    }
                 }
             } catch (err) {
-                console.log("Бэк выключен, используются моковые данные:", err.message);
+                console.error("Ошибка загрузки профиля:", err);
+                alert(err.response?.data?.message || "Не удалось загрузить профиль");
+            } finally {
+                setLoading(false);
             }
         }
         loadProfileData();
@@ -91,18 +81,33 @@ export default function Profile({ isOwn }) {
 
     const handleSaveProfile = async (e) => {
         e.preventDefault();
+        const trimmedUsername = editUsername.trim();
+
+        if (!USERNAME_REGEX.test(trimmedUsername)) {
+            alert("Никнейм должен быть от 3 до 30 символов (латиница, кириллица, цифры или _)");
+            return;
+        }
+
         try {
-            await restApi.users.updateProfile({ username: editUsername, bio: editBio });
-            setUser((prev) => ({ ...prev, username: editUsername, bio: editBio }));
+            const res = await restApi.users.updateProfile({
+                username: trimmedUsername,
+                description: editDescription.trim()
+            });
+            setUser(res.data || { ...user, username: trimmedUsername, description: editDescription.trim() });
             setIsEditingProfile(false);
+            alert("Профиль обновлён!");
         } catch (err) {
-            setUser((prev) => ({ ...prev, username: editUsername, bio: editBio }));
-            setIsEditingProfile(false);
+            alert(err.response?.data?.message || "Ошибка обновления профиля");
         }
     };
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
+        if (newPassword.length < 6) {
+            alert("Новый пароль должен быть не короче 6 символов!");
+            return;
+        }
+
         try {
             await restApi.users.changePassword({ oldPassword, newPassword });
             alert("Пароль успешно изменён!");
@@ -110,7 +115,7 @@ export default function Profile({ isOwn }) {
             setNewPassword("");
             setIsChangingPassword(false);
         } catch (err) {
-            console.error("Ошибка смены пароля:", err);
+            alert(err.response?.data?.message || "Ошибка смены пароля");
         }
     };
 
@@ -119,18 +124,32 @@ export default function Profile({ isOwn }) {
         if (!newPostText.trim()) return;
 
         try {
-            const res = await restApi.posts.createPost({ content: newPostText });
+            const res = await restApi.posts.createPost({ content: newPostText.trim() });
             setPosts([res.data, ...posts]);
             setNewPostText("");
         } catch (err) {
-            const fakePost = {
-                id: Date.now(),
-                content: newPostText,
-                createdAt: "Только что",
-                updatedAt: null
-            };
-            setPosts([fakePost, ...posts]);
-            setNewPostText("");
+            alert(err.response?.data?.message || "Ошибка создания поста");
+        }
+    };
+
+    const handleSaveEditedPost = async (postId) => {
+        if (!editingPostText.trim()) return;
+        try {
+            const res = await restApi.posts.updatePost(postId, { content: editingPostText.trim() });
+            setPosts(posts.map((p) => (p.id === postId ? res.data : p)));
+            setEditingPostId(null);
+            setEditingPostText("");
+        } catch (err) {
+            alert(err.response?.data?.message || "Ошибка редактирования поста");
+        }
+    };
+
+    const handleDeletePost = async (postId) => {
+        try {
+            await restApi.posts.deletePost(postId);
+            setPosts(posts.filter((p) => p.id !== postId));
+        } catch (err) {
+            alert(err.response?.data?.message || "Ошибка удаления поста");
         }
     };
 
@@ -139,6 +158,7 @@ export default function Profile({ isOwn }) {
             await restApi.friends.sendRequest(user.id);
             setFriendRequested(true);
         } catch (err) {
+            alert(err.response?.data?.message || "Заявка отправлена (или эндпоинт в разработке)");
             setFriendRequested(true);
         }
     };
@@ -153,11 +173,31 @@ export default function Profile({ isOwn }) {
         return null;
     };
 
+    if (loading) {
+        return (
+            <div className={style.profileWrapper}>
+                <Box><p>Загрузка профиля...</p></Box>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className={style.profileWrapper}>
+                <Box><p>Пользователь не найден.</p></Box>
+            </div>
+        );
+    }
+
     return (
         <div className={style.profileWrapper}>
             <Box>
                 <div className={style.topSection}>
-                    <img src={user.avatar} alt="Аватар" className={style.bigAvatar} />
+                    <img
+                        src={user.avatarUrl || "https://placehold.co/200x200"}
+                        alt="Аватар"
+                        className={style.bigAvatar}
+                    />
 
                     <div className={style.userDetails}>
                         <div className={style.nameRow}>
@@ -166,7 +206,7 @@ export default function Profile({ isOwn }) {
                         </div>
 
                         <span className={style.metaText}>
-                            Аккаунт создан: {user.createdAt}
+                            Аккаунт создан: {formatDate(user.createdAt)}
                         </span>
 
                         {isOwn && (
@@ -178,7 +218,9 @@ export default function Profile({ isOwn }) {
 
                         <div className={style.bioBlock}>
                             <strong>О себе: </strong>
-                            {user.bio ? user.bio : "Пользователь пока ничего не рассказал о себе."}
+                            {user.description
+                                ? user.description
+                                : "Пользователь пока ничего не рассказал о себе."}
                         </div>
 
                         <div className={style.controlsRow}>
@@ -213,7 +255,7 @@ export default function Profile({ isOwn }) {
                     <form className={style.editForm} onSubmit={handleSaveProfile}>
                         <div className={style.fieldGroup}>
                             <Input
-                                placeholder="Никнейм (до 30 символов)"
+                                placeholder="Никнейм (3-30 символов)"
                                 value={editUsername}
                                 maxLength={30}
                                 onChange={(e) => setEditUsername(e.target.value)}
@@ -228,19 +270,18 @@ export default function Profile({ isOwn }) {
                         </div>
 
                         <div className={style.fieldGroup}>
-                            <textarea
-                                className={style.textarea}
+                            <TextArea
                                 placeholder="Расскажите о себе (до 500 символов)..."
-                                value={editBio}
+                                value={editDescription}
                                 maxLength={500}
-                                onChange={(e) => setEditBio(e.target.value)}
+                                onChange={(e) => setEditDescription(e.target.value)}
                             />
                             <span
                                 className={`${style.charCounter} ${
-                                    editBio.length >= 500 ? style.charCounterLimit : ""
+                                    editDescription.length >= 500 ? style.charCounterLimit : ""
                                 }`}
                             >
-                                {editBio.length} / 500
+                                {editDescription.length} / 500
                             </span>
                         </div>
 
@@ -260,7 +301,7 @@ export default function Profile({ isOwn }) {
                         />
                         <Input
                             type="password"
-                            placeholder="Новый пароль"
+                            placeholder="Новый пароль (от 6 символов)"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                         />
@@ -275,8 +316,7 @@ export default function Profile({ isOwn }) {
                 <Box>
                     <h3>Новая запись</h3>
                     <form className={style.editForm} onSubmit={handleCreatePost}>
-                        <textarea
-                            className={style.textarea}
+                        <TextArea
                             placeholder="Что у вас нового?"
                             value={newPostText}
                             onChange={(e) => setNewPostText(e.target.value)}
@@ -295,17 +335,43 @@ export default function Profile({ isOwn }) {
             {posts.map((post) => (
                 <Box key={post.id}>
                     <div className={style.postHeader}>
-                        <img src={user.avatar} alt="avatar" className={style.smallAvatar} />
+                        <img
+                            src={user.avatarUrl || "https://placehold.co/100x100"}
+                            alt="avatar"
+                            className={style.smallAvatar}
+                        />
                         <div>
                             <strong>{user.username}</strong>
                             <div className={style.metaText}>
-                                {post.createdAt}
-                                {post.updatedAt && ` (изм. ${post.updatedAt})`}
+                                {formatDate(post.createdAt)}
+                                {post.updatedAt && ` (изм. ${formatDate(post.updatedAt)})`}
                             </div>
                         </div>
                     </div>
 
-                    <p style={{ wordBreak: "break-word" }}>{post.content}</p>
+                    {editingPostId === post.id ? (
+                        <div className={style.editForm}>
+                            <TextArea
+                                value={editingPostText}
+                                onChange={(e) => setEditingPostText(e.target.value)}
+                            />
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                <Button
+                                    text="Сохранить"
+                                    onClick={() => handleSaveEditedPost(post.id)}
+                                />
+                                <Button
+                                    text="Отмена"
+                                    onClick={() => {
+                                        setEditingPostId(null);
+                                        setEditingPostText("");
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <p style={{ wordBreak: "break-word" }}>{post.content}</p>
+                    )}
 
                     <div className={style.actions}>
                         <Button
@@ -316,16 +382,20 @@ export default function Profile({ isOwn }) {
                             text="Комментарии"
                             onClick={() => navigate(`/post/${post.id}/comments`)}
                         />
-                        {isOwn && (
-                            <Button
-                                text="Удалить"
-                                onClick={async () => {
-                                    try {
-                                        await restApi.posts.deletePost(post.id);
-                                    } catch (e) {}
-                                    setPosts(posts.filter((p) => p.id !== post.id));
-                                }}
-                            />
+                        {isOwn && editingPostId !== post.id && (
+                            <>
+                                <Button
+                                    text="Изменить"
+                                    onClick={() => {
+                                        setEditingPostId(post.id);
+                                        setEditingPostText(post.content);
+                                    }}
+                                />
+                                <Button
+                                    text="Удалить"
+                                    onClick={() => handleDeletePost(post.id)}
+                                />
+                            </>
                         )}
                     </div>
                 </Box>

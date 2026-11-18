@@ -1,0 +1,9 @@
+.bigAvatar{
+    border-radius: 16px;
+    box-shadow: 0 4px rgba(0,0,0,0.2);
+}
+.topSection{
+    display:flex;
+    flex-direction: row;
+
+}

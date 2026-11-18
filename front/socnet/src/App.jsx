@@ -5,6 +5,7 @@ import Footer from './components/Footer/Footer';
 import Feed from './pages/Feed/Feed';
 import Auth from './pages/Auth/Auth';
 import Profile from './pages/Profile/Profile';
+import Comments from './pages/Comments/Comments';
 import FriendsList from './pages/FriendsList/FriendsList';
 import Search from './pages/Search/Search';
 import Settings from './pages/Settings/Settings';
@@ -25,6 +26,7 @@ function App() {
 
             <Route path="/profile/me" element={<Profile isOwn={true} />} />
             <Route path="/profile/:id" element={<Profile isOwn={false} />} />
+            <Route path="/post/:id/comments" element={<Comments />} />
 
             <Route path="/friends" element={<FriendsList />} />
             <Route path="/search" element={<Search />} />
