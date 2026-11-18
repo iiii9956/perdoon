@@ -46,9 +46,10 @@ public class ChatController {
             @RequestBody com.example.backend.feature.chat.dto.ChatSendRequest request,
             @AuthenticationPrincipal String userId
     ) {
-        if (request.getConversationId() == null) {
-            request.setConversationId(conversationId);
-        }
-        return ResponseEntity.ok(chatService.send(Long.valueOf(userId), request));
+        request.setConversationId(conversationId);
+
+        return ResponseEntity.ok(
+                chatService.send(Long.valueOf(userId), request)
+        );
     }
 }
