@@ -9,6 +9,8 @@ import Comments from './pages/Comments/Comments';
 import FriendsList from './pages/FriendsList/FriendsList';
 import Search from './pages/Search/Search';
 import Settings from './pages/Settings/Settings';
+import Chats from './pages/Chats/Chats';
+import Admin from './pages/Admin/Admin';
 
 import './App.css';
 
@@ -31,6 +33,13 @@ function App() {
             <Route path="/friends" element={<FriendsList />} />
             <Route path="/search" element={<Search />} />
             <Route path="/settings" element={<Settings />} />
+
+            {/* Чаты: список и конкретный чат */}
+            <Route path="/chats" element={<Chats />} />
+            <Route path="/chats/:chatId" element={<Chats />} />
+
+            {/* Панель администратора */}
+            <Route path="/admin" element={<Admin />} />
 
             <Route path="*" element={<Navigate to="/feed" replace />} />
           </Routes>

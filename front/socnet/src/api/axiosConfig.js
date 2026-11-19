@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Если явно задан VITE_API_URL — используем его, иначе пустая строка (запросы идут через Vite proxy без CORS)
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const apiClient = axios.create({
     baseURL: API_URL,

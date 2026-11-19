@@ -14,6 +14,7 @@ export const restApi = {
         getUserProfile: (id) => apiClient.get(`/api/users/${id}`),
         updateProfile: (profileData) => apiClient.put('/api/users/me', profileData),
         changePassword: (passwordData) => apiClient.put('/api/users/me/password', passwordData),
+        getUserPosts: (userId) => apiClient.get(`/api/posts/user/${userId}`),
     },
 
     // === 3. ПОСТЫ ===
@@ -30,6 +31,8 @@ export const restApi = {
     likes: {
         likePost: (postId) => apiClient.post(`/api/posts/${postId}/likes`),
         unlikePost: (postId) => apiClient.delete(`/api/posts/${postId}/likes`),
+        // Получить список кто лайкнул — чтобы проверить лайкнул ли текущий юзер
+        getLikes: (postId) => apiClient.get(`/api/posts/${postId}/likes`),
     },
 
     // === 5. КОММЕНТАРИИ ===
@@ -45,17 +48,27 @@ export const restApi = {
         sendRequest: (userId) => apiClient.post(`/api/friends/requests/${userId}`),
         acceptRequest: (requestId) => apiClient.post(`/api/friends/requests/${requestId}/accept`),
         rejectRequest: (requestId) => apiClient.post(`/api/friends/requests/${requestId}/reject`),
+        cancelRequest: (userId) => apiClient.delete(`/api/friends/requests/${userId}`),
         removeFriend: (userId) => apiClient.delete(`/api/friends/${userId}`),
         getFriendsList: () => apiClient.get('/api/friends'),
-        getRequests: () => apiClient.get('/api/friends/requests'),
+        getRequests: (direction) => apiClient.get(`/api/friends/requests?direction=${direction}`),
     },
 
     // === 7. ЧАТЫ И СООБЩЕНИЯ ===
     chats: {
         getChats: () => apiClient.get('/api/chats'),
-        createOrOpenChat: (userId) => apiClient.post('/api/chats', { userId }),
+        createOrOpenChat: (userId) => apiClient.post(`/api/chats/with/${userId}`),
         getChatMessages: (chatId) => apiClient.get(`/api/chats/${chatId}/messages`),
+        sendMessage: (chatId, content) => apiClient.post(`/api/chats/${chatId}/messages`, { content }),
         deleteMessage: (messageId) => apiClient.delete(`/api/messages/${messageId}`),
         updateMessage: (messageId, content) => apiClient.put(`/api/messages/${messageId}`, { content }),
+    },
+
+    // === 8. АДМИНИСТРИРОВАНИЕ ===
+    admin: {
+        checkAdmin: () => apiClient.get('/api/admin/test'),
+        getAllUsers: () => apiClient.get('/api/admin/users'),
+        changeUserRole: (userId, role) => apiClient.patch(`/api/admin/users/${userId}/role`, { role }),
+        deleteUser: (userId) => apiClient.delete(`/api/admin/users/${userId}`),
     }
 };

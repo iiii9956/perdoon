@@ -6,30 +6,36 @@ import Input from "../../components/Input/Input";
 import { restApi } from "../../api/restApi";
 import style from "./Profile.module.css";
 import TextArea from "../../components/TextArea/TextArea";
-
+import { useToast } from "../../components/Toast/Toast";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 
 export default function Profile({ isOwn }) {
     const { id } = useParams();
     const navigate = useNavigate();
+    const toast = useToast();
 
     const [user, setUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [isChangingPassword, setIsChangingPassword] = useState(false);
 
     const [editUsername, setEditUsername] = useState("");
     const [editDescription, setEditDescription] = useState("");
-
-    const [oldPassword, setOldPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
+    const [editAvatarUrl, setEditAvatarUrl] = useState("");
 
     const [newPostText, setNewPostText] = useState("");
     const [editingPostId, setEditingPostId] = useState(null);
     const [editingPostText, setEditingPostText] = useState("");
 
-    const [friendRequested, setFriendRequested] = useState(false);
+    // Модальные окна подтверждения
+    const [postToDelete, setPostToDelete] = useState(null);
+    const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+
+    // Статус дружбы: "LOADING" | "FRIEND" | "OUTGOING_PENDING" | "INCOMING_PENDING" | "NONE"
+    const [friendshipStatus, setFriendshipStatus] = useState("LOADING");
+    const [incomingRequestId, setIncomingRequestId] = useState(null);
 
     const USERNAME_REGEX = /^[a-zA-Zа-яА-ЯёЁ0-9_]{3,30}$/;
 
@@ -39,31 +45,89 @@ export default function Profile({ isOwn }) {
         return isNaN(date.getTime()) ? dateString : date.toLocaleString("ru-RU");
     };
 
+    const checkFriendship = async (targetUserId) => {
+        try {
+            try {
+                const chatRes = await restApi.chats.createOrOpenChat(targetUserId);
+                if (chatRes.data) {
+                    setFriendshipStatus("FRIEND");
+                    return;
+                }
+            } catch (chatErr) {
+                // Если 403 Forbidden, значит не друзья
+            }
+
+            const [incomingRes, outgoingRes] = await Promise.all([
+                restApi.friends.getRequests("incoming").catch(() => ({ data: [] })),
+                restApi.friends.getRequests("outgoing").catch(() => ({ data: [] }))
+            ]);
+
+            const incoming = Array.isArray(incomingRes.data) ? incomingRes.data : [];
+            const outgoing = Array.isArray(outgoingRes.data) ? outgoingRes.data : [];
+
+            const inReq = incoming.find((r) => String(r.userId) === String(targetUserId));
+            if (inReq) {
+                setFriendshipStatus("INCOMING_PENDING");
+                setIncomingRequestId(inReq.id);
+                return;
+            }
+
+            const outReq = outgoing.find((r) => String(r.userId) === String(targetUserId));
+            if (outReq) {
+                setFriendshipStatus("OUTGOING_PENDING");
+                return;
+            }
+
+            setFriendshipStatus("NONE");
+        } catch {
+            setFriendshipStatus("NONE");
+        }
+    };
+
     useEffect(() => {
         setIsEditingProfile(false);
-        setIsChangingPassword(false);
 
         async function loadProfileData() {
             try {
                 setLoading(true);
+
+                // Всегда загружаем профиль текущего авторизованного пользователя
+                const meRes = await restApi.users.getMe().catch(() => ({ data: null }));
+                if (meRes.data) {
+                    try {
+                        await restApi.admin.checkAdmin();
+                        meRes.data.role = "ADMIN";
+                    } catch {
+                        meRes.data.role = meRes.data.role || "USER";
+                    }
+                    setCurrentUser(meRes.data);
+                }
+
                 if (isOwn) {
-                    const [meRes, myPostsRes] = await Promise.all([
-                        restApi.users.getMe(),
-                        restApi.posts.getMyPosts()
-                    ]);
-                    setUser(meRes.data);
-                    setEditUsername(meRes.data.username || "");
-                    setEditDescription(meRes.data.description || "");
+                    const myPostsRes = await restApi.posts.getMyPosts().catch(() => ({ data: [] }));
+                    if (meRes.data) {
+                        setUser(meRes.data);
+                        setEditUsername(meRes.data.username || "");
+                        setEditDescription(meRes.data.description || "");
+                        setEditAvatarUrl(meRes.data.avatarUrl || "");
+                    }
                     setPosts(Array.isArray(myPostsRes.data) ? myPostsRes.data : []);
                 } else if (id) {
                     const userRes = await restApi.users.getUserProfile(id);
-                    setUser(userRes.data);
+                    const userData = userRes.data;
+                    if (meRes.data && String(meRes.data.id) === String(id)) {
+                        userData.role = meRes.data.role;
+                    }
+                    setUser(userData);
+
+                    // Проверяем статус дружбы
+                    checkFriendship(id);
+
                     try {
                         const userPostsRes = await restApi.users.getUserPosts(id);
                         setPosts(Array.isArray(userPostsRes.data) ? userPostsRes.data : []);
                     } catch {
-                        // Если эндпоинт чужих постов ещё не добавлен на бэке — фильтруем из общей ленты
-                        const feedRes = await restApi.posts.getFeed();
+                        const feedRes = await restApi.posts.getFeed().catch(() => ({ data: [] }));
                         if (Array.isArray(feedRes.data)) {
                             setPosts(feedRes.data.filter((p) => String(p.authorId) === String(id)));
                         }
@@ -71,7 +135,7 @@ export default function Profile({ isOwn }) {
                 }
             } catch (err) {
                 console.error("Ошибка загрузки профиля:", err);
-                alert(err.response?.data?.message || "Не удалось загрузить профиль");
+                toast(err.response?.data?.message || "Не удалось загрузить профиль", "error");
             } finally {
                 setLoading(false);
             }
@@ -82,40 +146,34 @@ export default function Profile({ isOwn }) {
     const handleSaveProfile = async (e) => {
         e.preventDefault();
         const trimmedUsername = editUsername.trim();
+        const trimmedAvatarUrl = editAvatarUrl.trim();
 
         if (!USERNAME_REGEX.test(trimmedUsername)) {
-            alert("Никнейм должен быть от 3 до 30 символов (латиница, кириллица, цифры или _)");
+            toast("Никнейм должен быть от 3 до 30 символов (латиница, кириллица, цифры или _)", "error");
+            return;
+        }
+
+        if (trimmedAvatarUrl.length > 1000) {
+            toast("URL аватарки слишком длинный (макс. 1000 символов)", "error");
             return;
         }
 
         try {
             const res = await restApi.users.updateProfile({
                 username: trimmedUsername,
-                description: editDescription.trim()
+                description: editDescription.trim(),
+                avatarUrl: trimmedAvatarUrl || null
             });
-            setUser(res.data || { ...user, username: trimmedUsername, description: editDescription.trim() });
+            setUser(res.data || {
+                ...user,
+                username: trimmedUsername,
+                description: editDescription.trim(),
+                avatarUrl: trimmedAvatarUrl || null
+            });
             setIsEditingProfile(false);
-            alert("Профиль обновлён!");
+            toast("Профиль обновлён!", "success");
         } catch (err) {
-            alert(err.response?.data?.message || "Ошибка обновления профиля");
-        }
-    };
-
-    const handleChangePassword = async (e) => {
-        e.preventDefault();
-        if (newPassword.length < 6) {
-            alert("Новый пароль должен быть не короче 6 символов!");
-            return;
-        }
-
-        try {
-            await restApi.users.changePassword({ oldPassword, newPassword });
-            alert("Пароль успешно изменён!");
-            setOldPassword("");
-            setNewPassword("");
-            setIsChangingPassword(false);
-        } catch (err) {
-            alert(err.response?.data?.message || "Ошибка смены пароля");
+            toast(err.response?.data?.message || "Ошибка обновления профиля", "error");
         }
     };
 
@@ -127,8 +185,9 @@ export default function Profile({ isOwn }) {
             const res = await restApi.posts.createPost({ content: newPostText.trim() });
             setPosts([res.data, ...posts]);
             setNewPostText("");
+            toast("Запись опубликована!", "success");
         } catch (err) {
-            alert(err.response?.data?.message || "Ошибка создания поста");
+            toast(err.response?.data?.message || "Ошибка создания поста", "error");
         }
     };
 
@@ -139,27 +198,108 @@ export default function Profile({ isOwn }) {
             setPosts(posts.map((p) => (p.id === postId ? res.data : p)));
             setEditingPostId(null);
             setEditingPostText("");
+            toast("Запись обновлена!", "success");
         } catch (err) {
-            alert(err.response?.data?.message || "Ошибка редактирования поста");
+            toast(err.response?.data?.message || "Ошибка редактирования поста", "error");
         }
     };
 
-    const handleDeletePost = async (postId) => {
+    const handleDeletePost = (postId) => {
+        setPostToDelete(postId);
+    };
+
+    const confirmDeletePost = async () => {
+        if (!postToDelete) return;
         try {
-            await restApi.posts.deletePost(postId);
-            setPosts(posts.filter((p) => p.id !== postId));
+            await restApi.posts.deletePost(postToDelete);
+            setPosts(posts.filter((p) => p.id !== postToDelete));
+            toast("Запись удалена!", "success");
         } catch (err) {
-            alert(err.response?.data?.message || "Ошибка удаления поста");
+            toast(err.response?.data?.message || "Ошибка удаления поста", "error");
+        } finally {
+            setPostToDelete(null);
         }
     };
 
     const handleAddFriend = async () => {
         try {
             await restApi.friends.sendRequest(user.id);
-            setFriendRequested(true);
+            setFriendshipStatus("OUTGOING_PENDING");
+            toast("Заявка в друзья отправлена!", "success");
         } catch (err) {
-            alert(err.response?.data?.message || "Заявка отправлена (или эндпоинт в разработке)");
-            setFriendRequested(true);
+            const msg = err.response?.data?.message || "";
+            if (msg.includes("Вы уже друзья")) {
+                setFriendshipStatus("FRIEND");
+                toast("Вы уже друзья!", "info");
+            } else if (msg.includes("Заявка уже отправлена")) {
+                setFriendshipStatus("OUTGOING_PENDING");
+                toast("Заявка уже была отправлена", "info");
+            } else if (msg.includes("уже отправил вам заявку")) {
+                setFriendshipStatus("INCOMING_PENDING");
+                toast("Этот пользователь уже отправил вам заявку!", "info");
+            } else {
+                toast(msg || "Не удалось отправить заявку", "error");
+            }
+        }
+    };
+
+    const handleCancelRequest = async () => {
+        try {
+            await restApi.friends.cancelRequest(user.id);
+            setFriendshipStatus("NONE");
+            toast("Заявка отменена", "info");
+        } catch (err) {
+            toast(err.response?.data?.message || "Ошибка отмены заявки", "error");
+        }
+    };
+
+    const handleAcceptRequest = async () => {
+        if (!incomingRequestId) return;
+        try {
+            await restApi.friends.acceptRequest(incomingRequestId);
+            await restApi.chats.createOrOpenChat(user.id).catch(() => {});
+            setFriendshipStatus("FRIEND");
+            toast("Заявка принята! Теперь вы друзья.", "success");
+        } catch (err) {
+            toast(err.response?.data?.message || "Ошибка принятия заявки", "error");
+        }
+    };
+
+    const handleRejectRequest = async () => {
+        if (!incomingRequestId) return;
+        try {
+            await restApi.friends.rejectRequest(incomingRequestId);
+            setFriendshipStatus("NONE");
+            toast("Заявка отклонена", "info");
+        } catch (err) {
+            toast(err.response?.data?.message || "Ошибка отклонения заявки", "error");
+        }
+    };
+
+    const handleOpenChat = async () => {
+        try {
+            const res = await restApi.chats.createOrOpenChat(user.id);
+            navigate(`/chats/${res.data.id}`);
+        } catch (err) {
+            toast(err.response?.data?.message || "Не удалось открыть чат", "error");
+        }
+    };
+
+    const handleAdminDeleteUser = () => {
+        if (!user) return;
+        setIsDeleteUserModalOpen(true);
+    };
+
+    const confirmDeleteUser = async () => {
+        if (!user) return;
+        try {
+            await restApi.admin.deleteUser(user.id);
+            toast("Пользователь удалён", "success");
+            navigate("/feed");
+        } catch (err) {
+            toast(err.response?.data?.message || "Ошибка удаления пользователя", "error");
+        } finally {
+            setIsDeleteUserModalOpen(false);
         }
     };
 
@@ -188,6 +328,10 @@ export default function Profile({ isOwn }) {
             </div>
         );
     }
+
+    const isModeratorOrAdmin =
+        currentUser?.role === "ADMIN" || currentUser?.role === "MODERATOR";
+    const isAdmin = currentUser?.role === "ADMIN";
 
     return (
         <div className={style.profileWrapper}>
@@ -225,29 +369,68 @@ export default function Profile({ isOwn }) {
 
                         <div className={style.controlsRow}>
                             {isOwn ? (
-                                <>
-                                    <Button
-                                        text={isEditingProfile ? "Отмена" : "Редактировать профиль"}
-                                        onClick={() => {
-                                            setIsEditingProfile(!isEditingProfile);
-                                            setIsChangingPassword(false);
-                                        }}
-                                    />
-                                    <Button
-                                        text={isChangingPassword ? "Отмена" : "Изменить пароль"}
-                                        onClick={() => {
-                                            setIsChangingPassword(!isChangingPassword);
-                                            setIsEditingProfile(false);
-                                        }}
-                                    />
-                                </>
-                            ) : (
                                 <Button
-                                    text={friendRequested ? "Заявка отправлена" : "Добавить в друзья"}
-                                    onClick={handleAddFriend}
+                                    text={isEditingProfile ? "Отмена" : "Редактировать профиль"}
+                                    onClick={() => setIsEditingProfile(!isEditingProfile)}
                                 />
+                            ) : (
+                                <>
+                                    {friendshipStatus === "FRIEND" && (
+                                        <>
+                                            <span style={{ color: "#2d6a4f", fontWeight: "bold", alignSelf: "center", marginRight: "8px" }}>
+                                                ✓ В друзьях
+                                            </span>
+                                            <Button
+                                                text="Написать сообщение"
+                                                onClick={handleOpenChat}
+                                            />
+                                        </>
+                                    )}
+
+                                    {friendshipStatus === "OUTGOING_PENDING" && (
+                                        <>
+                                            <span style={{ color: "#666", alignSelf: "center", marginRight: "8px", fontSize: "14px" }}>
+                                                Заявка отправлена
+                                            </span>
+                                            <Button
+                                                text="Отменить заявку"
+                                                onClick={handleCancelRequest}
+                                            />
+                                        </>
+                                    )}
+
+                                    {friendshipStatus === "INCOMING_PENDING" && (
+                                        <>
+                                            <Button
+                                                text="Принять заявку"
+                                                onClick={handleAcceptRequest}
+                                            />
+                                            <Button
+                                                text="Отклонить"
+                                                onClick={handleRejectRequest}
+                                            />
+                                        </>
+                                    )}
+
+                                    {friendshipStatus === "NONE" && (
+                                        <Button
+                                            text="Добавить в друзья"
+                                            onClick={handleAddFriend}
+                                        />
+                                    )}
+                                </>
                             )}
                         </div>
+
+                        {/* Удаление пользователя администратором */}
+                        {!isOwn && isAdmin && (
+                            <div className={style.adminPanel}>
+                                <Button
+                                    text="Удалить аккаунт пользователя"
+                                    onClick={handleAdminDeleteUser}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -270,6 +453,24 @@ export default function Profile({ isOwn }) {
                         </div>
 
                         <div className={style.fieldGroup}>
+                            <Input
+                                placeholder="URL аватарки (необязательно)"
+                                value={editAvatarUrl}
+                                maxLength={1000}
+                                onChange={(e) => setEditAvatarUrl(e.target.value)}
+                            />
+                            {editAvatarUrl && (
+                                <img
+                                    src={editAvatarUrl}
+                                    alt="Предпросмотр аватарки"
+                                    className={style.avatarPreview}
+                                    onError={(e) => { e.target.style.display = "none"; }}
+                                    onLoad={(e) => { e.target.style.display = "block"; }}
+                                />
+                            )}
+                        </div>
+
+                        <div className={style.fieldGroup}>
                             <TextArea
                                 placeholder="Расскажите о себе (до 500 символов)..."
                                 value={editDescription}
@@ -287,26 +488,6 @@ export default function Profile({ isOwn }) {
 
                         <div>
                             <Button text="Сохранить изменения" type="submit" />
-                        </div>
-                    </form>
-                )}
-
-                {isOwn && isChangingPassword && (
-                    <form className={style.editForm} onSubmit={handleChangePassword}>
-                        <Input
-                            type="password"
-                            placeholder="Старый пароль"
-                            value={oldPassword}
-                            onChange={(e) => setOldPassword(e.target.value)}
-                        />
-                        <Input
-                            type="password"
-                            placeholder="Новый пароль (от 6 символов)"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                        <div>
-                            <Button text="Обновить пароль" type="submit" />
                         </div>
                     </form>
                 )}
@@ -332,58 +513,64 @@ export default function Profile({ isOwn }) {
                 <h2>Записи пользователя ({posts.length})</h2>
             </Box>
 
-            {posts.map((post) => (
-                <Box key={post.id}>
-                    <div className={style.postHeader}>
-                        <img
-                            src={user.avatarUrl || "https://placehold.co/100x100"}
-                            alt="avatar"
-                            className={style.smallAvatar}
-                        />
-                        <div>
-                            <strong>{user.username}</strong>
-                            <div className={style.metaText}>
-                                {formatDate(post.createdAt)}
-                                {post.updatedAt && ` (изм. ${formatDate(post.updatedAt)})`}
-                            </div>
-                        </div>
-                    </div>
+            {posts.map((post) => {
+                const isAuthor = isOwn || (currentUser && Number(post.authorId) === Number(currentUser.id));
+                const canDelete = isAuthor || isModeratorOrAdmin;
 
-                    {editingPostId === post.id ? (
-                        <div className={style.editForm}>
-                            <TextArea
-                                value={editingPostText}
-                                onChange={(e) => setEditingPostText(e.target.value)}
+                return (
+                    <Box key={post.id}>
+                        <div className={style.postHeader}>
+                            <img
+                                src={user.avatarUrl || "https://placehold.co/100x100"}
+                                alt="avatar"
+                                className={style.smallAvatar}
                             />
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <Button
-                                    text="Сохранить"
-                                    onClick={() => handleSaveEditedPost(post.id)}
-                                />
-                                <Button
-                                    text="Отмена"
-                                    onClick={() => {
-                                        setEditingPostId(null);
-                                        setEditingPostText("");
-                                    }}
-                                />
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <strong>{user.username}</strong>
+                                    {renderRoleBadge(user.role)}
+                                </div>
+                                <div className={style.metaText}>
+                                    {formatDate(post.createdAt)}
+                                    {post.updatedAt && ` (изм. ${formatDate(post.updatedAt)})`}
+                                </div>
                             </div>
                         </div>
-                    ) : (
-                        <p style={{ wordBreak: "break-word" }}>{post.content}</p>
-                    )}
 
-                    <div className={style.actions}>
-                        <Button
-                            text="Лайк"
-                            onClick={() => restApi.likes.likePost(post.id)}
-                        />
-                        <Button
-                            text="Комментарии"
-                            onClick={() => navigate(`/post/${post.id}/comments`)}
-                        />
-                        {isOwn && editingPostId !== post.id && (
-                            <>
+                        {editingPostId === post.id ? (
+                            <div className={style.editForm}>
+                                <TextArea
+                                    value={editingPostText}
+                                    onChange={(e) => setEditingPostText(e.target.value)}
+                                />
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                    <Button
+                                        text="Сохранить"
+                                        onClick={() => handleSaveEditedPost(post.id)}
+                                    />
+                                    <Button
+                                        text="Отмена"
+                                        onClick={() => {
+                                            setEditingPostId(null);
+                                            setEditingPostText("");
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <p style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{post.content}</p>
+                        )}
+
+                        <div className={style.actions}>
+                            <Button
+                                text="Лайк"
+                                onClick={() => restApi.likes.likePost(post.id)}
+                            />
+                            <Button
+                                text="Комментарии"
+                                onClick={() => navigate(`/post/${post.id}/comments`)}
+                            />
+                            {isAuthor && editingPostId !== post.id && (
                                 <Button
                                     text="Изменить"
                                     onClick={() => {
@@ -391,15 +578,37 @@ export default function Profile({ isOwn }) {
                                         setEditingPostText(post.content);
                                     }}
                                 />
+                            )}
+                            {canDelete && editingPostId !== post.id && (
                                 <Button
-                                    text="Удалить"
+                                    text={!isAuthor && isModeratorOrAdmin ? "Удалить (модерация)" : "Удалить"}
                                     onClick={() => handleDeletePost(post.id)}
                                 />
-                            </>
-                        )}
-                    </div>
-                </Box>
-            ))}
+                            )}
+                        </div>
+                    </Box>
+                );
+            })}
+
+            <ConfirmModal
+                isOpen={!!postToDelete}
+                title="Удаление публикации"
+                message="Вы действительно хотите удалить эту запись? Это действие необратимо."
+                confirmText="Удалить"
+                cancelText="Отмена"
+                onConfirm={confirmDeletePost}
+                onCancel={() => setPostToDelete(null)}
+            />
+
+            <ConfirmModal
+                isOpen={isDeleteUserModalOpen}
+                title="Удаление аккаунта"
+                message={`Вы уверены, что хотите удалить аккаунт пользователя ${user?.username}? Все связанные с ним публикации, комментарии и сообщения будут безвозвратно удалены.`}
+                confirmText="Удалить аккаунт"
+                cancelText="Отмена"
+                onConfirm={confirmDeleteUser}
+                onCancel={() => setIsDeleteUserModalOpen(false)}
+            />
         </div>
     );
 }
