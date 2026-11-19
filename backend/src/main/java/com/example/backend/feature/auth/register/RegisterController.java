@@ -1,8 +1,10 @@
 package com.example.backend.feature.auth.register;
 
+import com.example.backend.feature.auth.register.dto.RegisterRequest;
 import com.example.backend.feature.auth.register.dto.RegisterResponse;
 import com.example.backend.feature.user.User;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +24,7 @@ public class RegisterController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
 
-            @RequestBody RegisterRequest request
+          @Valid @RequestBody RegisterRequest request
 
     ) {
         User user = authService.register(request);

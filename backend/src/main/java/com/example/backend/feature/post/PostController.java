@@ -5,6 +5,7 @@ import com.example.backend.feature.post.dto.CreatePostRequest;
 import com.example.backend.feature.post.dto.UpdatePostRequest;
 import com.example.backend.feature.post.dto.PostResponse;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,7 +46,7 @@ public class PostController {
     // Создать публикацию
     @PostMapping
     public ResponseEntity<PostResponse> createPost(
-            @RequestBody CreatePostRequest request,
+           @Valid @RequestBody CreatePostRequest request,
             @AuthenticationPrincipal String userId) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -59,7 +60,7 @@ public class PostController {
     @PutMapping("/{id}")
     public ResponseEntity<PostResponse> updatePost(
             @PathVariable Long id,
-            @RequestBody UpdatePostRequest request,
+         @Valid   @RequestBody UpdatePostRequest request,
             @AuthenticationPrincipal String userId) {
 
         return ResponseEntity.ok(

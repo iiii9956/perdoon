@@ -1,6 +1,7 @@
 package com.example.backend.feature.auth.register;
 
 import com.example.backend.exception.EmailAlreadyExistsException;
+import com.example.backend.feature.auth.register.dto.RegisterRequest;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.user.UserRepository;
 import org.junit.jupiter.api.Test;

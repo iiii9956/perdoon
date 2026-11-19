@@ -5,6 +5,7 @@ import com.example.backend.feature.user.dto.UserResponse;
 import com.example.backend.feature.user.dto.PublicUserResponse;
 import com.example.backend.feature.user.dto.UpdateProfileRequest;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,7 +53,7 @@ public class UserController {
     @PutMapping("/me")
     public UserResponse updateProfile(
             @AuthenticationPrincipal String userId,
-            @RequestBody UpdateProfileRequest request
+         @Valid @RequestBody UpdateProfileRequest request
     ) {
         if (userId == null) {
             throw new ResponseStatusException(

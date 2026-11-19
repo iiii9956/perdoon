@@ -1,8 +1,12 @@
-package com.example.backend.feature.auth.login;
+package com.example.backend.feature.auth.login.dto;
+
+import jakarta.validation.constraints.NotBlank;
 
 public class LoginRequest {
 
+    @NotBlank(message = "Введите email или телефон")
     private String login;
+    @NotBlank(message = "Введите пароль")
     private String password;
 
     // Пустой конструктор для Spring

@@ -1,8 +1,13 @@
 
 package com.example.backend.feature.post.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class CreatePostRequest {
 
+    @NotBlank(message = "Текст публикации не может быть пустым")
+    @Size(max = 5000, message = "Публикация слишком длинная")
     private String content;
     private String imageUrl;
 

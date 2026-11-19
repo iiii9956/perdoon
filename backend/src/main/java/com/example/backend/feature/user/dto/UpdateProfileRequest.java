@@ -1,9 +1,13 @@
 
 package com.example.backend.feature.user.dto;
 
+import jakarta.validation.constraints.Size;
+
 public class UpdateProfileRequest {
 
+    @Size(max = 50, message = "Имя слишком длинное")
     private String username;
+    @Size(max = 500, message = "Описание слишком длинное")
     private String description;
     private String avatarUrl;
 

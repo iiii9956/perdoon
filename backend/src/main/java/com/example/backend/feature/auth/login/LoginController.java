@@ -2,10 +2,12 @@
 
 package com.example.backend.feature.auth.login;
 
+import com.example.backend.feature.auth.login.dto.LoginRequest;
 import com.example.backend.feature.auth.login.dto.LoginResponse;
 import com.example.backend.feature.user.User;
 import com.example.backend.feature.auth.jwt.JwtService;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +26,7 @@ public class LoginController {
 
     // Авторизация пользователя
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
 
         // Проверяем логин и пароль
         User user = loginService.login(request);

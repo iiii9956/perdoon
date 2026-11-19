@@ -3,6 +3,7 @@ package com.example.backend.feature.chat;
 import com.example.backend.feature.chat.dto.ChatMessageResponse;
 import com.example.backend.feature.chat.dto.ConversationResponse;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -43,7 +44,7 @@ public class ChatController {
     @PostMapping("/{conversationId}/messages")
     public ResponseEntity<ChatMessageResponse> send(
             @PathVariable Long conversationId,
-            @RequestBody com.example.backend.feature.chat.dto.ChatSendRequest request,
+          @Valid @RequestBody com.example.backend.feature.chat.dto.ChatSendRequest request,
             @AuthenticationPrincipal String userId
     ) {
         request.setConversationId(conversationId);
