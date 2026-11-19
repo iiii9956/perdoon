@@ -20,6 +20,7 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
@@ -80,6 +81,7 @@ public class SecurityConfig {
                             UsernamePasswordAuthenticationFilter.class
                     );
 
+
             return http.build();
 
         } catch (Exception e) {
@@ -101,4 +103,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 }
