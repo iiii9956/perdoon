@@ -9,6 +9,7 @@ public class UpdatePostRequest {
     @NotBlank(message = "Текст публикации не может быть пустым")
     @Size(max = 5000, message = "Публикация слишком длинная")
     private String content;
+    @Size(max = 1000, message = "url слишком длинный")
     private String imageUrl;
 
     public UpdatePostRequest() {

@@ -16,10 +16,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-    @Column(unique = true)
+    @Column(unique = true, length = 254)
     private String email;
 
-    @Column(unique = true)
+    @Column(unique = true, length = 15)
     private String phone;
 
     @Column(name = "password_hash", nullable = false)
@@ -30,7 +30,7 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(unique = true, nullable = false, length = 30)
     private String username;
 
     @Column(length = 500)
