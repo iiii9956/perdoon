@@ -4,4 +4,20 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // sockjs-client использует Node.js-переменную global — делаем полифилл для браузера
+    global: 'globalThis',
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8080',
+        ws: true,
+      }
+    }
+  }
 })

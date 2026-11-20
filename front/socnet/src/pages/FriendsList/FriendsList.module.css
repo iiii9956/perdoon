@@ -1,0 +1,85 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px rgba(0,0,0,0.08);
+    transition: background 0.15s;
+    margin: 0;
+}
+
+.tab:hover {
+    background: #f0f0f0;
+}
+
+.tabActive {
+    background: #d1e8ff;
+    border-color: #457b9d;
+    font-weight: bold;
+}
+
+.userRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+    box-shadow: 0 2px rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+
+.userInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.username {
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    color: #1d3557;
+}
+
+.username:hover {
+    text-decoration: underline;
+}
+
+.dateText {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.empty {
+    color: #888;
+    font-size: 14px;
+    text-align: center;
+    padding: 12px 0;
+}

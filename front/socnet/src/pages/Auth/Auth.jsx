@@ -5,9 +5,11 @@ import Input from "../../components/Input/Input";
 import Box from "../../components/Box/Box";
 import style from "./Auth.module.css";
 import { restApi } from "../../api/restApi";
+import { useToast } from "../../components/Toast/Toast";
 
 export default function Auth() {
     const navigate = useNavigate();
+    const toast = useToast();
     const [isLogin, setIsLogin] = useState(true);
 
     // Общее поле для почты или телефона (и для входа, и для регистрации)
@@ -22,6 +24,8 @@ export default function Auth() {
     const USERNAME_REGEX = /^[a-zA-Zа-яА-ЯёЁ0-9_]{3,30}$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const PHONE_REGEX = /^(\+7|8)\d{10}$/;
+    // Пароль: только ASCII-символы (без кириллицы), мин 8, макс 100
+    const PASSWORD_NO_CYRILLIC = /^[^\u0400-\u04FF]+$/;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,32 +37,35 @@ export default function Auth() {
 
         // 1. Валидация поля "Почта или телефон"
         if (!trimmedContact) {
-            alert("Введите почту или номер телефона!");
+            toast("Введите почту или номер телефона!", "error");
             return;
         }
 
         if (isEmail) {
             if (!EMAIL_REGEX.test(trimmedContact)) {
-                alert("Некорректный формат почты (пример: user@mail.ru)");
+                toast("Некорректный формат почты (пример: user@mail.ru)", "error");
                 return;
             }
         } else {
             if (!PHONE_REGEX.test(cleanPhone)) {
-                alert("Некорректный номер телефона (введите 11 цифр, начиная с +7 или 8)");
+                toast("Некорректный номер телефона (введите 11 цифр, начиная с +7 или 8)", "error");
                 return;
             }
         }
 
         // 2. Валидация пароля
-        if (password.length < 6) {
-            alert("Пароль должен содержать минимум 6 символов!");
+        if (password.length < 8) {
+            toast("Пароль должен содержать минимум 8 символов!", "error");
+            return;
+        }
+        if (!PASSWORD_NO_CYRILLIC.test(password)) {
+            toast("Пароль не должен содержать кириллические символы!", "error");
             return;
         }
 
         try {
             if (isLogin) {
                 // === ЛОГИН ===
-                // Если это телефон, отправляем очищенный от пробелов и скобок вариант
                 const loginValue = isEmail ? trimmedContact : cleanPhone;
 
                 const response = await restApi.auth.login({
@@ -68,21 +75,22 @@ export default function Auth() {
 
                 if (response.data?.token) {
                     localStorage.setItem("jwt_token", response.data.token);
+                    toast("Добро пожаловать!", "success");
                     navigate("/feed");
                 } else {
-                    alert("Сервер не вернул токен авторизации");
+                    toast("Сервер не вернул токен авторизации", "error");
                 }
             } else {
                 // === РЕГИСТРАЦИЯ ===
                 const trimmedUsername = username.trim();
 
                 if (!USERNAME_REGEX.test(trimmedUsername)) {
-                    alert("Никнейм должен быть от 3 до 30 символов и содержать только латиницу, кириллицу, цифры или _");
+                    toast("Никнейм должен быть от 3 до 30 символов (латиница, кириллица, цифры или _)", "error");
                     return;
                 }
 
                 if (password !== confirmPassword) {
-                    alert("Пароли не совпадают!");
+                    toast("Пароли не совпадают!", "error");
                     return;
                 }
 
@@ -93,14 +101,14 @@ export default function Auth() {
                     password
                 });
 
-                alert("Регистрация успешна! Теперь войдите в аккаунт.");
+                toast("Регистрация успешна! Теперь войдите в аккаунт.", "success");
                 setIsLogin(true);
                 setPassword("");
                 setConfirmPassword("");
             }
         } catch (error) {
             console.error("Ошибка авторизации:", error);
-            alert(error.response?.data?.message || "Ошибка при запросе к серверу");
+            toast(error.response?.data?.message || "Ошибка при запросе к серверу", "error");
         }
     };
 
@@ -121,23 +129,26 @@ export default function Auth() {
 
                     <Input
                         placeholder="Почта или телефон (+7...)"
+                        maxLength={254}
                         value={contact}
-                        onChange={(e) => setContact(e.target.value)}
+                        onChange={(e) => setContact(e.target.value.replace(/[а-яА-ЯёЁ]/g, ""))}
                     />
 
                     <Input
-                        placeholder="Пароль (от 6 символов)"
+                        placeholder="Пароль (от 8 символов)"
                         type="password"
+                        maxLength={100}
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => setPassword(e.target.value.replace(/[а-яА-ЯёЁ]/g, ""))}
                     />
 
                     {!isLogin && (
                         <Input
                             placeholder="Подтвердите пароль"
                             type="password"
+                            maxLength={100}
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(e) => setConfirmPassword(e.target.value.replace(/[а-яА-ЯёЁ]/g, ""))}
                         />
                     )}
 

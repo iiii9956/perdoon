@@ -11,3 +11,10 @@
     transition: 0.1s;
     background-color: rgb(250, 250, 250);
 }
+.danger{
+    background-color: #e63946;
+    color: white;
+}
+.danger:active{
+    background-color: #c53030;
+}
