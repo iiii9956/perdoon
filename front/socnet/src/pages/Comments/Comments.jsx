@@ -141,6 +141,13 @@ export default function Comments() {
                     <p style={{ wordBreak: "break-word", overflowWrap: "anywhere", margin: "4px 0" }}>
                         {post.content}
                     </p>
+                    {post.imageUrl && (
+                        <img
+                            src={post.imageUrl}
+                            alt="Вложение"
+                            style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "cover", borderRadius: "10px", margin: "8px 0" }}
+                        />
+                    )}
                 </Box>
             )}
 

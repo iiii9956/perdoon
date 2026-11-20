@@ -13,6 +13,8 @@ export const restApi = {
         getMe: () => apiClient.get('/api/users/me'),
         getUserProfile: (id) => apiClient.get(`/api/users/${id}`),
         updateProfile: (profileData) => apiClient.put('/api/users/me', profileData),
+        deleteMe: () => apiClient.delete('/api/users/me'),
+        getUsersCount: () => apiClient.get('/api/users/count'),
         changePassword: (passwordData) => apiClient.put('/api/users/me/password', passwordData),
         getUserPosts: (userId) => apiClient.get(`/api/posts/user/${userId}`),
     },
@@ -31,8 +33,8 @@ export const restApi = {
     likes: {
         likePost: (postId) => apiClient.post(`/api/posts/${postId}/likes`),
         unlikePost: (postId) => apiClient.delete(`/api/posts/${postId}/likes`),
-        // Получить список кто лайкнул — чтобы проверить лайкнул ли текущий юзер
         getLikes: (postId) => apiClient.get(`/api/posts/${postId}/likes`),
+        getLikesCount: (postId) => apiClient.get(`/api/posts/${postId}/likes/count`),
     },
 
     // === 5. КОММЕНТАРИИ ===

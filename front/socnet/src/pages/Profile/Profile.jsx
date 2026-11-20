@@ -8,6 +8,7 @@ import style from "./Profile.module.css";
 import TextArea from "../../components/TextArea/TextArea";
 import { useToast } from "../../components/Toast/Toast";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
+import LikesModal from "../../components/LikesModal/LikesModal";
 
 export default function Profile({ isOwn }) {
     const { id } = useParams();
@@ -26,12 +27,19 @@ export default function Profile({ isOwn }) {
     const [editAvatarUrl, setEditAvatarUrl] = useState("");
 
     const [newPostText, setNewPostText] = useState("");
+    const [newPostImageUrl, setNewPostImageUrl] = useState("");
     const [editingPostId, setEditingPostId] = useState(null);
     const [editingPostText, setEditingPostText] = useState("");
+    const [editingPostImageUrl, setEditingPostImageUrl] = useState("");
+
+    // Лайки
+    const [likesData, setLikesData] = useState({});
+    const [likesModalData, setLikesModalData] = useState({ isOpen: false, likes: [] });
 
     // Модальные окна подтверждения
     const [postToDelete, setPostToDelete] = useState(null);
     const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+    const [isDeleteOwnAccountOpen, setIsDeleteOwnAccountOpen] = useState(false);
 
     // Статус дружбы: "LOADING" | "FRIEND" | "OUTGOING_PENDING" | "INCOMING_PENDING" | "NONE"
     const [friendshipStatus, setFriendshipStatus] = useState("LOADING");
@@ -84,6 +92,33 @@ export default function Profile({ isOwn }) {
         }
     };
 
+    const loadLikesForPosts = async (postsList, myUserId) => {
+        if (!postsList || postsList.length === 0 || !myUserId) return;
+        try {
+            const likeChecks = await Promise.allSettled(
+                postsList.slice(0, 15).map(async (p) => {
+                    const res = await restApi.likes.getLikes(p.id);
+                    const users = Array.isArray(res.data) ? res.data : [];
+                    const liked = users.some((u) => Number(u.userId) === Number(myUserId));
+                    return { postId: p.id, liked, count: users.length, users };
+                })
+            );
+            const newMap = {};
+            likeChecks.forEach((r) => {
+                if (r.status === "fulfilled") {
+                    newMap[r.value.postId] = {
+                        liked: r.value.liked,
+                        count: r.value.count,
+                        users: r.value.users
+                    };
+                }
+            });
+            setLikesData((prev) => ({ ...prev, ...newMap }));
+        } catch (e) {
+            console.error("Ошибка загрузки лайков в профиле:", e);
+        }
+    };
+
     useEffect(() => {
         setIsEditingProfile(false);
 
@@ -111,7 +146,9 @@ export default function Profile({ isOwn }) {
                         setEditDescription(meRes.data.description || "");
                         setEditAvatarUrl(meRes.data.avatarUrl || "");
                     }
-                    setPosts(Array.isArray(myPostsRes.data) ? myPostsRes.data : []);
+                    const myPosts = Array.isArray(myPostsRes.data) ? myPostsRes.data : [];
+                    setPosts(myPosts);
+                    loadLikesForPosts(myPosts, meRes.data?.id);
                 } else if (id) {
                     const userRes = await restApi.users.getUserProfile(id);
                     const userData = userRes.data;
@@ -123,15 +160,18 @@ export default function Profile({ isOwn }) {
                     // Проверяем статус дружбы
                     checkFriendship(id);
 
+                    let userPosts = [];
                     try {
                         const userPostsRes = await restApi.users.getUserPosts(id);
-                        setPosts(Array.isArray(userPostsRes.data) ? userPostsRes.data : []);
+                        userPosts = Array.isArray(userPostsRes.data) ? userPostsRes.data : [];
                     } catch {
                         const feedRes = await restApi.posts.getFeed().catch(() => ({ data: [] }));
                         if (Array.isArray(feedRes.data)) {
-                            setPosts(feedRes.data.filter((p) => String(p.authorId) === String(id)));
+                            userPosts = feedRes.data.filter((p) => String(p.authorId) === String(id));
                         }
                     }
+                    setPosts(userPosts);
+                    loadLikesForPosts(userPosts, meRes.data?.id);
                 }
             } catch (err) {
                 console.error("Ошибка загрузки профиля:", err);
@@ -179,12 +219,21 @@ export default function Profile({ isOwn }) {
 
     const handleCreatePost = async (e) => {
         e.preventDefault();
-        if (!newPostText.trim()) return;
+        const content = newPostText.trim();
+        const imageUrl = newPostImageUrl.trim();
+        if (!content) {
+            toast("Текст публикации не может быть пустым", "warning");
+            return;
+        }
 
         try {
-            const res = await restApi.posts.createPost({ content: newPostText.trim() });
+            const res = await restApi.posts.createPost({
+                content,
+                imageUrl: imageUrl || null
+            });
             setPosts([res.data, ...posts]);
             setNewPostText("");
+            setNewPostImageUrl("");
             toast("Запись опубликована!", "success");
         } catch (err) {
             toast(err.response?.data?.message || "Ошибка создания поста", "error");
@@ -192,15 +241,95 @@ export default function Profile({ isOwn }) {
     };
 
     const handleSaveEditedPost = async (postId) => {
-        if (!editingPostText.trim()) return;
+        const content = editingPostText.trim();
+        const imageUrl = editingPostImageUrl.trim();
+        if (!content) {
+            toast("Текст публикации не может быть пустым", "warning");
+            return;
+        }
         try {
-            const res = await restApi.posts.updatePost(postId, { content: editingPostText.trim() });
+            const res = await restApi.posts.updatePost(postId, {
+                content,
+                imageUrl: imageUrl || null
+            });
             setPosts(posts.map((p) => (p.id === postId ? res.data : p)));
             setEditingPostId(null);
             setEditingPostText("");
+            setEditingPostImageUrl("");
             toast("Запись обновлена!", "success");
         } catch (err) {
             toast(err.response?.data?.message || "Ошибка редактирования поста", "error");
+        }
+    };
+
+    const handleToggleLike = async (postId) => {
+        const current = likesData[postId] || { liked: false, count: 0, users: [] };
+        const isCurrentlyLiked = current.liked;
+        const newCount = isCurrentlyLiked ? Math.max(0, current.count - 1) : current.count + 1;
+
+        setLikesData((prev) => ({
+            ...prev,
+            [postId]: {
+                ...current,
+                liked: !isCurrentlyLiked,
+                count: newCount
+            }
+        }));
+
+        try {
+            if (isCurrentlyLiked) {
+                await restApi.likes.unlikePost(postId);
+            } else {
+                await restApi.likes.likePost(postId);
+            }
+            const updated = await restApi.likes.getLikes(postId);
+            const users = Array.isArray(updated.data) ? updated.data : [];
+            setLikesData((prev) => ({
+                ...prev,
+                [postId]: {
+                    liked: !isCurrentlyLiked,
+                    count: users.length,
+                    users
+                }
+            }));
+        } catch (error) {
+            setLikesData((prev) => ({ ...prev, [postId]: current }));
+        }
+    };
+
+    const handleOpenLikesModal = async (postId) => {
+        const current = likesData[postId];
+        if (current?.users && current.users.length > 0) {
+            setLikesModalData({ isOpen: true, likes: current.users });
+        } else {
+            try {
+                const res = await restApi.likes.getLikes(postId);
+                const users = Array.isArray(res.data) ? res.data : [];
+                setLikesData((prev) => ({
+                    ...prev,
+                    [postId]: {
+                        liked: prev[postId]?.liked || false,
+                        count: users.length,
+                        users
+                    }
+                }));
+                setLikesModalData({ isOpen: true, likes: users });
+            } catch {
+                setLikesModalData({ isOpen: true, likes: [] });
+            }
+        }
+    };
+
+    const confirmDeleteOwnAccount = async () => {
+        try {
+            await restApi.users.deleteMe();
+            localStorage.removeItem("jwt_token");
+            toast("Ваш аккаунт успешно удалён", "info");
+            navigate("/auth");
+        } catch (err) {
+            toast(err.response?.data?.message || "Ошибка удаления аккаунта", "error");
+        } finally {
+            setIsDeleteOwnAccountOpen(false);
         }
     };
 
@@ -369,10 +498,17 @@ export default function Profile({ isOwn }) {
 
                         <div className={style.controlsRow}>
                             {isOwn ? (
-                                <Button
-                                    text={isEditingProfile ? "Отмена" : "Редактировать профиль"}
-                                    onClick={() => setIsEditingProfile(!isEditingProfile)}
-                                />
+                                <>
+                                    <Button
+                                        text={isEditingProfile ? "Отмена" : "Редактировать профиль"}
+                                        onClick={() => setIsEditingProfile(!isEditingProfile)}
+                                    />
+                                    <Button
+                                        text="Удалить мой аккаунт"
+                                        variant="danger"
+                                        onClick={() => setIsDeleteOwnAccountOpen(true)}
+                                    />
+                                </>
                             ) : (
                                 <>
                                     {friendshipStatus === "FRIEND" && (
@@ -498,10 +634,26 @@ export default function Profile({ isOwn }) {
                     <h3>Новая запись</h3>
                     <form className={style.editForm} onSubmit={handleCreatePost}>
                         <TextArea
-                            placeholder="Что у вас нового?"
+                            placeholder="Что у вас нового? (до 5000 символов)"
+                            maxLength={5000}
                             value={newPostText}
                             onChange={(e) => setNewPostText(e.target.value)}
                         />
+                        <Input
+                            placeholder="Ссылка на картинку (необязательно, https://...)"
+                            maxLength={1000}
+                            value={newPostImageUrl}
+                            onChange={(e) => setNewPostImageUrl(e.target.value)}
+                        />
+                        {newPostImageUrl && (
+                            <img
+                                src={newPostImageUrl}
+                                alt="Предпросмотр изображения"
+                                style={{ maxHeight: "150px", maxWidth: "100%", borderRadius: "8px", objectFit: "cover", margin: "4px 0" }}
+                                onError={(e) => { e.target.style.display = "none"; }}
+                                onLoad={(e) => { e.target.style.display = "block"; }}
+                            />
+                        )}
                         <div>
                             <Button text="Опубликовать" type="submit" />
                         </div>
@@ -540,9 +692,26 @@ export default function Profile({ isOwn }) {
                         {editingPostId === post.id ? (
                             <div className={style.editForm}>
                                 <TextArea
+                                    placeholder="Текст публикации..."
+                                    maxLength={5000}
                                     value={editingPostText}
                                     onChange={(e) => setEditingPostText(e.target.value)}
                                 />
+                                <Input
+                                    placeholder="Ссылка на картинку (https://...)"
+                                    maxLength={1000}
+                                    value={editingPostImageUrl}
+                                    onChange={(e) => setEditingPostImageUrl(e.target.value)}
+                                />
+                                {editingPostImageUrl && (
+                                    <img
+                                        src={editingPostImageUrl}
+                                        alt="Предпросмотр"
+                                        style={{ maxHeight: "150px", maxWidth: "100%", borderRadius: "8px", objectFit: "cover", margin: "4px 0" }}
+                                        onError={(e) => { e.target.style.display = "none"; }}
+                                        onLoad={(e) => { e.target.style.display = "block"; }}
+                                    />
+                                )}
                                 <div style={{ display: "flex", gap: "8px" }}>
                                     <Button
                                         text="Сохранить"
@@ -553,39 +722,64 @@ export default function Profile({ isOwn }) {
                                         onClick={() => {
                                             setEditingPostId(null);
                                             setEditingPostText("");
+                                            setEditingPostImageUrl("");
                                         }}
                                     />
                                 </div>
                             </div>
                         ) : (
-                            <p style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{post.content}</p>
+                            <>
+                                <p style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{post.content}</p>
+                                {post.imageUrl && (
+                                    <img
+                                        src={post.imageUrl}
+                                        alt="Вложение"
+                                        style={{ maxWidth: "100%", maxHeight: "500px", objectFit: "cover", borderRadius: "10px", marginBottom: "10px" }}
+                                    />
+                                )}
+                            </>
                         )}
 
-                        <div className={style.actions}>
-                            <Button
-                                text="Лайк"
-                                onClick={() => restApi.likes.likePost(post.id)}
-                            />
-                            <Button
-                                text="Комментарии"
-                                onClick={() => navigate(`/post/${post.id}/comments`)}
-                            />
-                            {isAuthor && editingPostId !== post.id && (
-                                <Button
-                                    text="Изменить"
-                                    onClick={() => {
-                                        setEditingPostId(post.id);
-                                        setEditingPostText(post.content);
-                                    }}
-                                />
-                            )}
-                            {canDelete && editingPostId !== post.id && (
-                                <Button
-                                    text={!isAuthor && isModeratorOrAdmin ? "Удалить (модерация)" : "Удалить"}
-                                    onClick={() => handleDeletePost(post.id)}
-                                />
-                            )}
-                        </div>
+                        {(() => {
+                            const likeInfo = likesData[post.id] || { liked: false, count: 0, users: [] };
+                            const isLiked = likeInfo.liked;
+                            const likesCount = likeInfo.count;
+
+                            return (
+                                <div className={style.actions}>
+                                    <Button
+                                        text={isLiked ? `❤️ ${likesCount}` : `🤍 ${likesCount}`}
+                                        onClick={() => handleToggleLike(post.id)}
+                                    />
+                                    {likesCount > 0 && (
+                                        <Button
+                                            text="Кто оценил"
+                                            onClick={() => handleOpenLikesModal(post.id)}
+                                        />
+                                    )}
+                                    <Button
+                                        text="Комментарии"
+                                        onClick={() => navigate(`/post/${post.id}/comments`)}
+                                    />
+                                    {isAuthor && editingPostId !== post.id && (
+                                        <Button
+                                            text="Изменить"
+                                            onClick={() => {
+                                                setEditingPostId(post.id);
+                                                setEditingPostText(post.content);
+                                                setEditingPostImageUrl(post.imageUrl || "");
+                                            }}
+                                        />
+                                    )}
+                                    {canDelete && editingPostId !== post.id && (
+                                        <Button
+                                            text={!isAuthor && isModeratorOrAdmin ? "Удалить (модерация)" : "Удалить"}
+                                            onClick={() => handleDeletePost(post.id)}
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </Box>
                 );
             })}
@@ -608,6 +802,23 @@ export default function Profile({ isOwn }) {
                 cancelText="Отмена"
                 onConfirm={confirmDeleteUser}
                 onCancel={() => setIsDeleteUserModalOpen(false)}
+            />
+
+            <ConfirmModal
+                isOpen={isDeleteOwnAccountOpen}
+                title="Удаление собственного аккаунта"
+                message="Вы уверены, что хотите удалить свой аккаунт? Все ваши публикации, комментарии, сообщения и список друзей будут безвозвратно стёрты. Это действие необратимо."
+                confirmText="Да, удалить мой аккаунт"
+                cancelText="Отмена"
+                onConfirm={confirmDeleteOwnAccount}
+                onCancel={() => setIsDeleteOwnAccountOpen(false)}
+            />
+
+            <LikesModal
+                isOpen={likesModalData.isOpen}
+                likes={likesModalData.likes}
+                currentUserId={currentUser?.id}
+                onClose={() => setLikesModalData({ isOpen: false, likes: [] })}
             />
         </div>
     );

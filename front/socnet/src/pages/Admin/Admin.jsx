@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Box from "../../components/Box/Box";
 import Button from "../../components/Button/Button";
@@ -12,11 +12,36 @@ export default function Admin() {
     const navigate = useNavigate();
     const toast = useToast();
 
+    const [userCount, setUserCount] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+
     // Поиск пользователя по ID
     const [searchQuery, setSearchQuery] = useState("");
     const [foundUser, setFoundUser] = useState(null);
     const [searching, setSearching] = useState(false);
+    const [selectedRole, setSelectedRole] = useState("USER");
+    const [savingRole, setSavingRole] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    useEffect(() => {
+        async function loadAdminData() {
+            try {
+                const [countRes, meRes] = await Promise.all([
+                    restApi.users.getUsersCount().catch(() => null),
+                    restApi.users.getMe().catch(() => null)
+                ]);
+                if (countRes && typeof countRes.data === "number") {
+                    setUserCount(countRes.data);
+                }
+                if (meRes?.data) {
+                    setCurrentUser(meRes.data);
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки данных админ-панели:", e);
+            }
+        }
+        loadAdminData();
+    }, []);
 
     const formatDate = (dateString) => {
         if (!dateString) return "";
@@ -35,6 +60,7 @@ export default function Admin() {
             if (!isNaN(id) && id > 0) {
                 const res = await restApi.users.getUserProfile(id);
                 setFoundUser(res.data);
+                setSelectedRole(res.data?.role || "USER");
             } else {
                 toast("Введите числовой ID пользователя", "warning");
             }
@@ -52,6 +78,33 @@ export default function Admin() {
         }
     };
 
+    const handleChangeRole = async () => {
+        if (!foundUser) return;
+        if (currentUser && Number(currentUser.id) === Number(foundUser.id)) {
+            toast("Нельзя изменять собственную роль", "warning");
+            return;
+        }
+
+        setSavingRole(true);
+        try {
+            const res = await restApi.admin.changeUserRole(foundUser.id, selectedRole);
+            const newRole = res.data?.role || selectedRole;
+            setFoundUser((prev) => ({ ...prev, role: newRole }));
+            toast(`Роль пользователя изменена на ${newRole}`, "success");
+        } catch (err) {
+            const status = err.response?.status;
+            if (status === 409) {
+                toast("Нельзя изменить роль последнего администратора", "error");
+            } else if (status === 403) {
+                toast("Недостаточно прав для изменения роли", "error");
+            } else {
+                toast(err.response?.data?.message || "Ошибка изменения роли", "error");
+            }
+        } finally {
+            setSavingRole(false);
+        }
+    };
+
     const handleDeleteUser = () => {
         if (!foundUser) return;
         setIsDeleteModalOpen(true);
@@ -64,6 +117,11 @@ export default function Admin() {
             toast("Пользователь удалён", "success");
             setFoundUser(null);
             setSearchQuery("");
+            // Обновляем счетчик пользователей
+            const countRes = await restApi.users.getUsersCount().catch(() => null);
+            if (countRes && typeof countRes.data === "number") {
+                setUserCount(countRes.data);
+            }
         } catch (err) {
             toast(err.response?.data?.message || "Ошибка удаления пользователя", "error");
         } finally {
@@ -71,11 +129,25 @@ export default function Admin() {
         }
     };
 
+    const isMyself = currentUser && foundUser && Number(currentUser.id) === Number(foundUser.id);
+
     return (
         <div className={style.adminWrapper}>
             <Box>
                 <h1>Панель администратора</h1>
                 <p className={style.subtitle}>Управление пользователями системы</p>
+            </Box>
+
+            <Box>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                        <h3 style={{ margin: "0 0 4px 0", color: "#1d3557" }}>Статистика платформы</h3>
+                        <span style={{ color: "#666", fontSize: "14px" }}>Всего зарегистрировано пользователей:</span>
+                    </div>
+                    <span style={{ fontSize: "28px", fontWeight: "bold", color: "#457b9d" }}>
+                        {userCount !== null ? userCount : "..."}
+                    </span>
+                </div>
             </Box>
 
             <Box>
@@ -114,7 +186,46 @@ export default function Admin() {
                                     Зарегистрирован: {formatDate(foundUser.createdAt)}
                                 </span>
                             )}
+                            {foundUser.role && (
+                                <span className={style.meta}>
+                                    Текущая роль: <strong>{foundUser.role}</strong>
+                                </span>
+                            )}
                         </div>
+                    </div>
+
+                    {/* Смена роли пользователя */}
+                    <div style={{ marginTop: "8px", marginBottom: "16px", padding: "12px", background: "#f8f9fa", borderRadius: "8px", border: "1px solid #e9ecef" }}>
+                        <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#333" }}>Назначение роли</h4>
+                        {isMyself ? (
+                            <p style={{ margin: 0, fontSize: "13px", color: "#888" }}>
+                                Вы не можете изменить роль собственного аккаунта.
+                            </p>
+                        ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                <select
+                                    value={selectedRole}
+                                    onChange={(e) => setSelectedRole(e.target.value)}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #ccc",
+                                        fontSize: "14px",
+                                        cursor: "pointer",
+                                        background: "white"
+                                    }}
+                                >
+                                    <option value="USER">USER (Обычный пользователь)</option>
+                                    <option value="MODERATOR">MODERATOR (Модератор)</option>
+                                    <option value="ADMIN">ADMIN (Администратор)</option>
+                                </select>
+                                <Button
+                                    text={savingRole ? "Сохранение..." : "Сохранить роль"}
+                                    onClick={handleChangeRole}
+                                    disabled={savingRole}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Удаление пользователя: просто красная область с кнопкой без лишних надписей */}
